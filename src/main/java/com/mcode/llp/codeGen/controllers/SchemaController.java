@@ -50,6 +50,8 @@ import java.util.*;
                     property.setType(eachSchema.getValue().getType());
 
                     property.setRequired(schema.getRequired().contains(property.getName()));
+                    property.setMinimum(eachSchema.getValue().getMinimum());
+                    property.setMaximum(eachSchema.getValue().getMaximum());
                     schemaService.save(property);
                 }
 

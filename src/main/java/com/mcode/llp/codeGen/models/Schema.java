@@ -10,6 +10,8 @@ public class Schema {
     String type;
     Map<String, Schema> properties = new HashMap<>();
     Set<String> required = new HashSet<>();
+    Integer minimum;
+    Integer maximum;
 
     public Schema() {
     }
@@ -44,5 +46,21 @@ public class Schema {
 
     public void setRequired(Set<String> required) {
         this.required = required;
+    }
+
+    public void setMinimum(Integer minimum) {
+        this.minimum= minimum;
+    }
+
+   public Integer getMinimum() {
+        return minimum;
+    }
+
+    public void setMaximum(Integer maximum) {
+        this.maximum= maximum;
+    }
+
+    public Integer getMaximum() {
+        return maximum;
     }
 }
