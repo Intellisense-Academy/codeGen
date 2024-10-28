@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "title" : "Student",
+  "properties": {
+    "name": {
+      "type": "string"
+	},
+    "age": {
+      "type": "integer",
+	  "minimum": 18,
+	  "maximum": 80
+    }
+  },
+  "required": ["name", "age"]
+}
