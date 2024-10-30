@@ -1,5 +1,7 @@
 package com.mcode.llp.codeGen.services;
 
+
+
 import com.mcode.llp.codeGen.databases.SchemaDAO;
 import com.mcode.llp.codeGen.models.Property;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,7 @@ public class SchemaService {
 
 
     public List<String> getAllEntityNames(){return schemaRepository.getAllEntityNames();}
+
 
 
 }
