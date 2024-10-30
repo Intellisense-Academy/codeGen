@@ -1,7 +1,9 @@
 package com.mcode.llp.codeGen.controllers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mcode.llp.codeGen.models.Property;
 import com.mcode.llp.codeGen.models.Schema;
+import com.mcode.llp.codeGen.services.JsonSchemaValidationService;
 import com.mcode.llp.codeGen.services.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,8 @@ import java.util.*;
         private static final Logger logger = LoggerFactory.getLogger(SchemaController.class);
         @Autowired
         private SchemaService schemaService;
+        @Autowired
+        private JsonSchemaValidationService service;
 
         @PostMapping("/schemas")
         public ResponseEntity<?> create(@RequestBody Schema schema) {
@@ -147,6 +151,14 @@ import java.util.*;
 
             return ResponseEntity.ok(schemas);
         }
+
+
+
+            @PostMapping("/validate")
+            public String validateEvent( @RequestBody JsonNode jsonNode ){
+                return service.validateJson(jsonNode);
+            }
+
 
     }
 
