@@ -17,5 +17,3 @@ buildNumber.properties
 .classpath
 .idea/
 
-#env
-.env
