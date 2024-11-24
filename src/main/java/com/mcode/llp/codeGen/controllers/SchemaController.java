@@ -1,5 +1,6 @@
 package com.mcode.llp.codeGen.controllers;
 
+import com.mcode.llp.codeGen.models.CommanProperty;
 import com.mcode.llp.codeGen.models.Property;
 import com.mcode.llp.codeGen.models.Schema;
 import com.mcode.llp.codeGen.services.SchemaService;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
     @RestController
-    public class SchemaController {
+    public class SchemaController extends CommanProperty {
 
         private static final Logger logger = LoggerFactory.getLogger(SchemaController.class);
         @Autowired
@@ -36,12 +37,6 @@ import java.util.*;
             }
 
             try {
-
-                if (schema == null || schema.getProperties() == null) {
-                    logger.warn("Recived Null or Empty Schema Input");
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid input: schema is null or empty");
-                }
-
 
                 for (Map.Entry<String, Schema> eachSchema : schema.getProperties().entrySet()) {
                     Property property = new Property();
