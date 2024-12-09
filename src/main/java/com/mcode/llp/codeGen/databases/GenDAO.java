@@ -126,4 +126,16 @@ public class GenDAO {
             e.printStackTrace();
         }
         }
+
+    public boolean isDataExist(String entityQuery) {
+        try (PreparedStatement preparedStatement = createConnection().prepareStatement(entityQuery)) {
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                return resultSet.next();
+            }
+        } catch (SQLException e) {
+            System.out.println("Error viewing entities.");
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
