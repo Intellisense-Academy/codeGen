@@ -94,7 +94,12 @@ public class QueryManager {
 
 
     public List<Map<String, Object>> viewAllData(String entityName) {
-        String viewData = "SELECT NAME , TYPE  FROM " + entityName;
+        String viewData = "SELECT *  FROM " + entityName;
         return genDAO.viewAllData(viewData);
+    }
+
+    public boolean isDataExist(String entityName) {
+        String entityQuery="SELECT DISTINCT entity FROM property WHERE entity = '" + entityName + "'";
+        return genDAO.isDataExist(entityQuery);
     }
 }
