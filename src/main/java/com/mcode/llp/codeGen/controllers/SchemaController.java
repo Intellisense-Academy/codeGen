@@ -1,7 +1,10 @@
 package com.mcode.llp.codeGen.controllers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mcode.llp.codeGen.models.Property;
 import com.mcode.llp.codeGen.models.Schema;
+import com.mcode.llp.codeGen.models.SchemaFileUtil;
+import com.mcode.llp.codeGen.services.JsonSchemaValidationService;
 import com.mcode.llp.codeGen.services.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.FileNotFoundException;
 import java.util.*;
     @RestController
     public class SchemaController {
@@ -17,6 +21,8 @@ import java.util.*;
         private static final Logger logger = LoggerFactory.getLogger(SchemaController.class);
         @Autowired
         private SchemaService schemaService;
+        @Autowired
+        private JsonSchemaValidationService service;
 
         @PostMapping("/schemas")
         public ResponseEntity<?> create(@RequestBody Schema schema) {
@@ -89,6 +95,8 @@ import java.util.*;
                     Schema propertySchema = new Schema();
                     schemaProperties.put(property.getName(), propertySchema);
                     propertySchema.setType(property.getType());
+                    propertySchema.setMinimum(property.getMinimum());
+                    propertySchema.setMaximum(property.getMaximum());
                     if (property.isRequired()) {
                         requiredFields.add(property.getName());
                     }
@@ -97,6 +105,8 @@ import java.util.*;
                         schema.setRequired(requiredFields);
                     }
                 }
+                // Save schema to file
+                SchemaFileUtil.saveSchemaToFile(schema);
                 return ResponseEntity.ok(schema);
             } else {
                 return ResponseEntity.notFound().build();
@@ -129,6 +139,8 @@ import java.util.*;
                         Schema propertySchema = new Schema();
                         propertySchema.setType(property.getType());
                         schemaProperties.put(property.getName(), propertySchema);
+                        propertySchema.setMinimum(property.getMinimum());
+                        propertySchema.setMaximum(property.getMaximum());
 
                         if (property.isRequired()) {
                             requiredFields.add(property.getName());
@@ -144,9 +156,18 @@ import java.util.*;
 
                 schemas.add(schema);
             }
-
+            // Save schema to file
+            SchemaFileUtil.saveSchemaToFile(schemas);
             return ResponseEntity.ok(schemas);
         }
+
+
+
+            @PostMapping("/validate")
+            public String validateEvent( @RequestBody JsonNode jsonNode ) throws FileNotFoundException {
+                return service.validateJson(jsonNode);
+            }
+
 
     }
 
