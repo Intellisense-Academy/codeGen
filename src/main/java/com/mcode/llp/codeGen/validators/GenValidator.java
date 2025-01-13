@@ -1,17 +1,23 @@
 package com.mcode.llp.codeGen.validators;
 
+import com.mcode.llp.codeGen.managers.QueryManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
+
 
 @Service
 public class GenValidator {
+    private final QueryManager queryManager;
+
+    @Autowired
+    public GenValidator(QueryManager queryManager) {
+        this.queryManager = queryManager;
+    }
 
     public boolean isEntityExists(String entityName) {
-        String filePath = "C:\\controller\\entityfile\\" + entityName + ".json";
-        Path path = Paths.get(filePath);
-        return Files.exists(path);
+        return queryManager.isDataExist(entityName);
     }
 }
