@@ -12,4 +12,3 @@ public class AppConfig {
     String username;
     String password;
 }
-

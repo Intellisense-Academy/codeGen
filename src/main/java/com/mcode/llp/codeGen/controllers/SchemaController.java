@@ -1,10 +1,8 @@
 package com.mcode.llp.codeGen.controllers;
 
-import com.mcode.llp.codeGen.models.CommanProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.mcode.llp.codeGen.models.Property;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mcode.llp.codeGen.models.Schema;
-import com.mcode.llp.codeGen.models.SchemaFileUtil;
 import com.mcode.llp.codeGen.services.JsonSchemaValidationService;
 import com.mcode.llp.codeGen.services.SchemaService;
 import org.slf4j.Logger;
@@ -17,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.FileNotFoundException;
 import java.util.*;
     @RestController
-    public class SchemaController extends CommanProperty {
+    public class SchemaController {
 
         private static final Logger logger = LoggerFactory.getLogger(SchemaController.class);
         @Autowired
@@ -100,15 +98,13 @@ import java.util.*;
                         schema.setRequired(requiredFields);
                     }
                 }
-                // Save schema to file
-                SchemaFileUtil.saveSchemaToFile(schema);
                 return ResponseEntity.ok(schema);
             } else {
                 return ResponseEntity.notFound().build();
             }
         }
 
-        @GetMapping("/entities")
+        @GetMapping("/schemas")
         public ResponseEntity<List<Schema>> getAllEntities() {
             List<String> entityNames = schemaService.getAllEntityNames();
             if (entityNames == null || entityNames.isEmpty()) {
@@ -120,11 +116,7 @@ import java.util.*;
             for (String entityName : entityNames) {
                 Schema schema = new Schema();
                 schema.setTitle(entityName);
-
-
                 Set<Property> properties = schemaService.getByName(entityName);
-
-
 
                 if (properties != null && !properties.isEmpty()) {
                     Map<String, Schema> schemaProperties = new HashMap<>();
@@ -151,8 +143,6 @@ import java.util.*;
 
                 schemas.add(schema);
             }
-            // Save schema to file
-            SchemaFileUtil.saveSchemaToFile(schemas);
             return ResponseEntity.ok(schemas);
         }
 
