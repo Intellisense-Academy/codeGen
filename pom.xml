@@ -41,6 +41,12 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20210307</version>
+		</dependency>
+
+		<dependency>
 			<groupId>com.networknt</groupId>
 			<artifactId>json-schema-validator</artifactId>
 			<version>1.5.1</version>

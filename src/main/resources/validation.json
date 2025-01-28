@@ -1,1 +1,0 @@
-{"title":"Student","properties":{"Studentname4":{"type":"string"},"Studentname3":{"type":"string"},"Studentname2":{"type":"string"},"Studentname1":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":80}},"required":["Studentname4","Studentname3","Studentname2","Studentname1","age"]}

@@ -1,7 +1,9 @@
 package com.mcode.llp.codeGen.services;
 
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.mcode.llp.codeGen.models.Property;
+import com.mcode.llp.codeGen.models.Schema;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
@@ -9,39 +11,57 @@ import com.networknt.schema.ValidationMessage;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Service
 @Slf4j
 public class JsonSchemaValidationService {
-    private final String SCHEMA_VALIDATION_FILE = "E:\\codeGen\\src\\main\\resources\\validation.json";
+    @Autowired
+    private SchemaService schemaService;
+
     private JsonSchema jsonSchema;
 
-    private void loadSchema() throws IOException {
-        InputStream schemaInputStream = new FileInputStream(new File(SCHEMA_VALIDATION_FILE));
-        jsonSchema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(schemaInputStream);
+    /**
+     * Load schema dynamically from database instead of hardcoding.
+     */
+    private void loadSchema(String entityName) throws IOException {
+        String schemaJson = schemaService.getSchema(entityName).toString();
+
+        if (schemaJson == null) {
+            throw new IOException("Schema not found for entity: " + entityName);
+        }
+
+        jsonSchema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(schemaJson);
     }
 
-    public String validateJson(JsonNode jsonNode) {
+    /**
+     * Validate JSON against dynamically loaded schema.
+     */
+    public boolean validateJson(JsonNode jsonNode, String entityName) {
         try {
-            loadSchema(); // Ensure schema is reloaded for every validation
+            loadSchema(entityName); // Load schema dynamically
+
             Set<ValidationMessage> errors = jsonSchema.validate(jsonNode);
             if (errors.isEmpty()) {
-                log.info("event is valid");
-                return "Valid";
+                log.info("JSON is valid for entity: " + entityName);
+                return true;
             } else {
-                log.info("event is invalid");
-                return errors.toString();
+                log.info("JSON is invalid for entity: " + entityName);
+                return false;
             }
         } catch (IOException e) {
-            log.error("Error loading schema: ", e);
-            return "Schema loading error: " + e.getMessage();
+            log.error("Error loading schema: ", e.getMessage());
+            return false;
         }
     }
 }
