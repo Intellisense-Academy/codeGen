@@ -1,24 +1,24 @@
 package com.mcode.llp.codeGen.models;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import lombok.Data;
-
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @Entity
-@IdClass(PropertyId.class)
 @Data
-public class Property extends CommanProperty{
-
-    private long id;
+@IdClass(PropertyId.class)
+public class Property {
     @Id
     private String name;
-
-    private String type;
     @Id
     private String entity;
-
+    @Column(nullable = false)
+    private String type;
     private boolean required;
-
+    private Integer minimum;
+    private Integer maximum;
 }
