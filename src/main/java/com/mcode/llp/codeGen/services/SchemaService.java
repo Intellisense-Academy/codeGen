@@ -6,8 +6,6 @@ import com.mcode.llp.codeGen.databases.OpenSearchClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.Map;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import java.util.*;
 
 @Service
@@ -30,66 +28,33 @@ public class SchemaService {
         return openSearchClient.sendRequest(endpoint, "POST", jsonData);
     }
 
-    private Schema convertJsonToSchema(JSONObject json) {
-        Schema schema = new Schema();
-        schema.setTitle(json.optString("title"));
-        schema.setType(json.optString("type", "object")); // Default type to "object"
 
-        // Convert properties
-        if (json.has("properties")) {
-            JSONObject propertiesJson = json.getJSONObject("properties");
-            Map<String, Schema> properties = new HashMap<>();
-            for (String key : propertiesJson.keySet()) {
-                properties.put(key, convertJsonToSchema(propertiesJson.getJSONObject(key)));
-            }
-            schema.setProperties(properties);
-        }
-
-        // Convert required fields
-        if (json.has("required")) {
-            JSONArray requiredArray = json.getJSONArray("required");
-            Set<String> requiredFields = new HashSet<>();
-            for (int i = 0; i < requiredArray.length(); i++) {
-                requiredFields.add(requiredArray.getString(i));
-            }
-            schema.setRequired(requiredFields);
-        }
-
-        return schema;
-    }
-
-    public List<Schema> getAllSchema() throws Exception {
+    public JsonNode getAllSchema() throws Exception {
         String endpoint = "/schemas/_search?filter_path=hits.hits._source";
-        String requestBody = "{ \"query\": { \"match_all\": {} }, \"_source\": true }";
 
-        String response = openSearchClient.sendRequest(endpoint, "POST", requestBody);
+        String response = openSearchClient.sendRequest(endpoint, "GET", null);
+        JsonNode responseJson = objectMapper.readTree(response);
 
-        JSONObject jsonObject = new JSONObject(response);
-        JSONArray hitsArray = jsonObject.getJSONObject("hits").getJSONArray("hits");
+        JsonNode hitsArray = responseJson.at("/hits/hits");
 
-        List<Schema> schemas = new ArrayList<>();
-        for (int i = 0; i < hitsArray.length(); i++) {
-            JSONObject sourceObject = hitsArray.getJSONObject(i).getJSONObject("_source");
-
-            // Convert JSON to Schema object
-            Schema schema = convertJsonToSchema(sourceObject);
-            schemas.add(schema);
+        List<JsonNode> schemas = new ArrayList<>();
+        for (JsonNode hit : hitsArray) {
+            JsonNode sourceObject = hit.get("_source");
+            schemas.add(sourceObject);
         }
 
-        return schemas;
-
+        return objectMapper.valueToTree(schemas);
     }
 
-    public Schema getSchema(String entityName) {
-        String endpoint = "/schemas/_search";
+    public JsonNode getSchema(String entityName) {
+        String endpoint = "/schemas/_doc/" + entityName;
         try {
-            String requestBody = "{ \"query\": { \"term\": { \"_id\": \"" + entityName + "\" } }, \"_source\": true }";
-            String response = openSearchClient.sendRequest(endpoint, "POST", requestBody);
-            JSONObject jsonObject = new JSONObject(response);
-            if (jsonObject.has("hits") && jsonObject.getJSONObject("hits").has("hits")) {
-                JSONObject sourceObject = jsonObject.getJSONObject("hits").getJSONArray("hits").getJSONObject(0).getJSONObject("_source");
-                Schema schema = convertJsonToSchema(sourceObject);
-                return schema;
+            String response = openSearchClient.sendRequest(endpoint, "GET", null);
+
+            JsonNode responseJson = objectMapper.readTree(response);
+
+            if (responseJson.has("_source")) {
+                return responseJson.get("_source");
             } else {
                 throw new Exception("Document not found or missing _source");
             }

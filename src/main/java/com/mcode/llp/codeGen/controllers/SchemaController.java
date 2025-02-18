@@ -1,5 +1,6 @@
 package com.mcode.llp.codeGen.controllers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mcode.llp.codeGen.models.Schema;
 //import com.mcode.llp.codeGen.services.JsonSchemaValidationService;
 import com.mcode.llp.codeGen.services.SchemaService;
@@ -9,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
     public class SchemaController {
@@ -32,9 +32,9 @@ import java.util.List;
         }
 
         @GetMapping ("/schemas")
-        public ResponseEntity<List<Schema>> getAllSchemas(){
+        public ResponseEntity<JsonNode> getAllSchemas(){
             try {
-                List<Schema> response = openSearchService.getAllSchema();
+                JsonNode response = openSearchService.getAllSchema();
                 return ResponseEntity.ok(response);
             } catch (Exception e) {
                 return ResponseEntity.internalServerError().body(null);
@@ -42,9 +42,9 @@ import java.util.List;
         }
 
         @GetMapping("/schemas/{entityName}")
-        public ResponseEntity<Schema> getByName(@PathVariable(value = "entityName") String entityName) {
+        public ResponseEntity<JsonNode> getByName(@PathVariable(value = "entityName") String entityName) {
             try {
-                Schema response = openSearchService.getSchema(entityName);
+                JsonNode response = openSearchService.getSchema(entityName);
                 return ResponseEntity.ok(response);
             } catch (Exception e) {
                 logger.error("Error occurred: {}", e.getMessage());
