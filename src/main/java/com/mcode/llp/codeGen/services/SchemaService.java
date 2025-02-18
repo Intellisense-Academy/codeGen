@@ -1,39 +1,71 @@
 package com.mcode.llp.codeGen.services;
-
-
-
-import com.mcode.llp.codeGen.databases.SchemaDAO;
-import com.mcode.llp.codeGen.models.Property;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mcode.llp.codeGen.models.Schema;
+import com.mcode.llp.codeGen.databases.OpenSearchClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Set;
-
-
+import java.util.Map;
+import java.util.*;
 
 @Service
 public class SchemaService {
 
     @Autowired
-    private  SchemaDAO schemaRepository;
+    private OpenSearchClient openSearchClient;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public Property save(Property schemas) {
-        return schemaRepository.save(schemas);
+    public String insertSchema(String index, String id, Schema schemaData) throws Exception {
+        String jsonData = objectMapper.writeValueAsString(schemaData);
+        String endpoint = "/" + index + "/_doc/" + id;
+        return openSearchClient.sendRequest(endpoint, "POST", jsonData);
     }
 
-    public List<Property> getAll(String entityName) {
-        return schemaRepository.findAll();
+    public String updateSchema(String id, Schema schemaData) throws Exception {
+        String jsonData = objectMapper.writeValueAsString(Map.of("doc", schemaData));
+        String endpoint = "/schemas/_update/" + id;
+        return openSearchClient.sendRequest(endpoint, "POST", jsonData);
     }
 
-    public Set<Property> getByName(String entityName) {
-        return schemaRepository.findByEntityName(entityName);
+
+    public JsonNode getAllSchema() throws Exception {
+        String endpoint = "/schemas/_search?filter_path=hits.hits._source";
+
+        String response = openSearchClient.sendRequest(endpoint, "GET", null);
+        JsonNode responseJson = objectMapper.readTree(response);
+
+        JsonNode hitsArray = responseJson.at("/hits/hits");
+
+        List<JsonNode> schemas = new ArrayList<>();
+        for (JsonNode hit : hitsArray) {
+            JsonNode sourceObject = hit.get("_source");
+            schemas.add(sourceObject);
+        }
+
+        return objectMapper.valueToTree(schemas);
     }
 
+    public JsonNode getSchema(String entityName) {
+        String endpoint = "/schemas/_doc/" + entityName;
+        try {
+            String response = openSearchClient.sendRequest(endpoint, "GET", null);
 
-    public List<String> getAllEntityNames(){return schemaRepository.getAllEntityNames();}
+            JsonNode responseJson = objectMapper.readTree(response);
 
+            if (responseJson.has("_source")) {
+                return responseJson.get("_source");
+            } else {
+                throw new Exception("Document not found or missing _source");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
-
+    public String deleteSchema(String id) throws Exception {
+        String endpoint = "/schemas/_doc/"+id;
+        return openSearchClient.sendRequest(endpoint, "DELETE", null);
+    }
 }

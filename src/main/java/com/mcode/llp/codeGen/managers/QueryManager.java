@@ -21,33 +21,6 @@ public class QueryManager {
     }
 
 
-    public void createTable(String entityName) {
-
-        List<Property> properties = schemaService.getAll(entityName);
-        StringBuilder createTableSQL = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
-                .append(entityName)
-                .append(" (id SERIAL PRIMARY KEY");
-
-        for (Property property : properties) {
-            if (property.getEntity().equals(entityName)) {    // students, student
-                String dbType = null;
-                if (property.getType().equals("string")) {
-                    dbType = "varchar(255)";
-                } else {
-                    dbType = property.getType();
-                }
-                createTableSQL.append(", ")
-                        .append(property.getName())
-                        .append(" ")
-                        .append(dbType);
-            }
-        }
-        createTableSQL.append(");");
-        System.out.println(createTableSQL.toString());
-        genDAO.createTable(createTableSQL.toString());
-    }
-
-
     public void insertTable(String entityName, Map<String, Object> responseBody) {
         StringBuilder valuesPart = new StringBuilder("(" );
         StringBuilder keysPart = new StringBuilder("(");

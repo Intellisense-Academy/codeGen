@@ -1,16 +1,22 @@
 package com.mcode.llp.codeGen.controllers;
 import com.mcode.llp.codeGen.managers.QueryManager;
+import com.mcode.llp.codeGen.services.JsonSchemaValidationService;
 import com.mcode.llp.codeGen.validators.GenValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
 public class GenController {
+
+    @Autowired
+    private JsonSchemaValidationService service;
 
     private final GenValidator genValidator;
     private final QueryManager queryManager;
@@ -26,10 +32,15 @@ public class GenController {
             @RequestBody Map<String, Object> requestBody,
             @PathVariable(value = "entityName") String entityName) {
 
-        boolean isEntityExists = genValidator.isEntityExists(entityName);
+        // Convert the requestBody to a JsonNode
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.valueToTree(requestBody);
 
-        if (isEntityExists) {
-            queryManager.createTable(entityName);
+        boolean isEntityExists = genValidator.isEntityExists(entityName);
+        boolean isJsonExists = service.validateJson(jsonNode, entityName);
+
+        if (isEntityExists && isJsonExists) {
+            //queryManager.createTable(entityName);
             queryManager.insertTable(entityName, requestBody);
             return new ResponseEntity<>(requestBody, HttpStatus.CREATED);
         } else {
