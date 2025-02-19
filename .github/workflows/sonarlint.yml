@@ -1,0 +1,35 @@
+name: SonarLint Check
+
+on:
+  pull_request:
+    branches:
+      - main  # Runs on PRs to the main branch
+
+jobs:
+  sonarLintCheck:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'  # Adjust Java version as per your project
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # Adjust Node.js version if needed
+
+      - name: Install SonarLint CLI
+        run: npm install -g sonarlint-cli
+
+      - name: Run SonarLint
+        run: sonarlint --analyze
+
+      - name: Fail if SonarLint finds issues
+        if: failure()
+        run: exit 1
