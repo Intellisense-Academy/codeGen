@@ -1,4 +1,4 @@
-name: SonarLint Check
+name: SonarCloud Analysis
 
 on:
   pull_request:
@@ -6,31 +6,38 @@ on:
       - main  # Runs on PRs to the main branch
 
 jobs:
-  sonarLintCheck:
+  sonarqube:
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set up Java
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'  # Adjust based on your project
+          java-version: '17'
 
-      - name: Install SonarLint
-        run: |
-          wget https://binaries.sonarsource.com/SonarLint-for-Java/sonarlint-cli.zip
-          unzip sonarlint-cli.zip -d sonarlint
-          chmod +x sonarlint/bin/sonarlint
+      - name: Cache SonarCloud Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
-      - name: Run SonarLint Analysis
+      - name: Run SonarCloud Analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          sonarlint/bin/sonarlint -Dsonar.token=$SONAR_TOKEN -Dsonar.sources=src -Dsonar.java.binaries=bin
+          mvn clean verify sonar:sonar \
+            -Dsonar.projectKey=intellisense-academy_codeGen \
+            -Dsonar.organization=intellisense-academy \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.qualitygate.wait=true \
+            -Dsonar.login=$SONAR_TOKEN
 
-      - name: Fail if SonarLint finds issues
-        if: ${{ failure() }}
+      - name: Fail if SonarCloud is Skipped
+        if: failure()
         run: exit 1
