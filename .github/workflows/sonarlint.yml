@@ -25,10 +25,12 @@ jobs:
           unzip sonarlint-cli.zip -d sonarlint
           chmod +x sonarlint/bin/sonarlint
 
-      - name: Run SonarLint
+      - name: Run SonarLint Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          sonarlint/bin/sonarlint -Dsonar.sources=src -Dsonar.java.binaries=bin
+          sonarlint/bin/sonarlint -Dsonar.token=$SONAR_TOKEN -Dsonar.sources=src -Dsonar.java.binaries=bin
 
       - name: Fail if SonarLint finds issues
-        if: failure()
+        if: ${{ failure() }}
         run: exit 1
