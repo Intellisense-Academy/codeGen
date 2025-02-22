@@ -1,4 +1,4 @@
-package com.mcode.llp.codeGen.models;
+package com.mcode.llp.codegen.models;
 
 import lombok.Data;
 

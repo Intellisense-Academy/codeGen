@@ -1,11 +1,8 @@
-package com.mcode.llp.codeGen.validators;
+package com.mcode.llp.codegen.validators;
 
-import com.mcode.llp.codeGen.managers.QueryManager;
+import com.mcode.llp.codegen.managers.QueryManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Map;
 
 
 @Service

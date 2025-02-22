@@ -1,12 +1,10 @@
-package com.mcode.llp.codeGen.controllers;
+package com.mcode.llp.codegen.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.mcode.llp.codeGen.models.Schema;
-//import com.mcode.llp.codeGen.services.JsonSchemaValidationService;
-import com.mcode.llp.codeGen.services.SchemaService;
+import com.mcode.llp.codegen.models.Schema;
+import com.mcode.llp.codegen.services.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,27 +13,31 @@ import org.springframework.web.bind.annotation.*;
     public class SchemaController {
 
         private static final Logger logger = LoggerFactory.getLogger(SchemaController.class);
-        @Autowired
-        private SchemaService openSearchService;
-//        @Autowired
-//        private JsonSchemaValidationService service;
+        private static final String ACTION_1 = "An error occurred";
+        private static final String ACTION_2 = "Error occurred: {}";
+        String response ;
+        private final SchemaService openSearchService;
+
+        public SchemaController(SchemaService openSearchService) {
+            this.openSearchService = openSearchService;
+        }
 
         @PostMapping("/schemas")
-        public ResponseEntity<?> createSchema(@RequestBody Schema schema) {
+        public ResponseEntity<String> createSchema(@RequestBody Schema schema) {
             try {
-                String response = openSearchService.insertSchema("schemas", schema.getTitle(), schema);
-                return ResponseEntity.ok(response);
+                response = openSearchService.insertSchema("schemas", schema.getTitle(), schema);
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
             } catch (Exception e) {
-                logger.error("Error occurred: {}", e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+                logger.error(ACTION_2, e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION_1);
             }
         }
 
         @GetMapping ("/schemas")
         public ResponseEntity<JsonNode> getAllSchemas(){
             try {
-                JsonNode response = openSearchService.getAllSchema();
-                return ResponseEntity.ok(response);
+                JsonNode responses = openSearchService.getAllSchema();
+                return ResponseEntity.ok(responses);
             } catch (Exception e) {
                 return ResponseEntity.internalServerError().body(null);
             }
@@ -44,33 +46,33 @@ import org.springframework.web.bind.annotation.*;
         @GetMapping("/schemas/{entityName}")
         public ResponseEntity<JsonNode> getByName(@PathVariable(value = "entityName") String entityName) {
             try {
-                JsonNode response = openSearchService.getSchema(entityName);
-                return ResponseEntity.ok(response);
+                JsonNode responses = openSearchService.getSchema(entityName);
+                return ResponseEntity.ok(responses);
             } catch (Exception e) {
-                logger.error("Error occurred: {}", e.getMessage());
+                logger.error(ACTION_2, e.getMessage());
                 return ResponseEntity.internalServerError().body(null);
             }
         }
 
         @PutMapping("/schemas/{entityName}")
-        public ResponseEntity<?> UpdateSchema(@PathVariable String entityName, @RequestBody Schema schemaData){
+        public ResponseEntity<String> updateSchema(@PathVariable String entityName, @RequestBody Schema schemaData){
             try {
-                String response = openSearchService.updateSchema(entityName,schemaData);
+                response = openSearchService.updateSchema(entityName,schemaData);
                 return ResponseEntity.ok(response);
             } catch (Exception e) {
-                logger.error("Error occurred: {}", e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+                logger.error(ACTION_2, e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION_1);
             }
         }
 
     @DeleteMapping("/schemas/{entityName}")
-    public ResponseEntity<?> deleteSchema(@PathVariable(value = "entityName") String entityName) {
+    public ResponseEntity<String> deleteSchema(@PathVariable(value = "entityName") String entityName) {
         try {
-            String response = openSearchService.deleteSchema(entityName);
+            response = openSearchService.deleteSchema(entityName);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Error occurred: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+            logger.error(ACTION_2, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION_1);
         }
     }
 

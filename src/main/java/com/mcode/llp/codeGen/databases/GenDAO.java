@@ -1,6 +1,6 @@
-package com.mcode.llp.codeGen.databases;
+package com.mcode.llp.codegen.databases;
 
-import com.mcode.llp.codeGen.models.AppConfig;
+import com.mcode.llp.codegen.models.AppConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

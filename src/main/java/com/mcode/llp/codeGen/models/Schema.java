@@ -1,4 +1,4 @@
-package com.mcode.llp.codeGen.models;
+package com.mcode.llp.codegen.models;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -15,6 +15,4 @@ public class Schema {
     Integer minimum;
     Integer maximum;
 
-    public Schema() {
-    }
 }

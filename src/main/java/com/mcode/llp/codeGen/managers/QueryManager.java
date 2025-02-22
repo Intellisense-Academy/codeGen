@@ -1,8 +1,7 @@
-package com.mcode.llp.codeGen.managers;
+package com.mcode.llp.codegen.managers;
 
-import com.mcode.llp.codeGen.databases.GenDAO;
-import com.mcode.llp.codeGen.models.Property;
-import com.mcode.llp.codeGen.services.SchemaService;
+import com.mcode.llp.codegen.databases.GenDAO;
+import com.mcode.llp.codegen.services.SchemaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
