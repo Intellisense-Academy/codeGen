@@ -1,4 +1,4 @@
-package com.mcode.llp.codeGen.databases;
+package com.mcode.llp.codegen.databases;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

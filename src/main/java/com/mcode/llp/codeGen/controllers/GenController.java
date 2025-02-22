@@ -1,7 +1,7 @@
-package com.mcode.llp.codeGen.controllers;
-import com.mcode.llp.codeGen.managers.QueryManager;
-import com.mcode.llp.codeGen.services.JsonSchemaValidationService;
-import com.mcode.llp.codeGen.validators.GenValidator;
+package com.mcode.llp.codegen.controllers;
+import com.mcode.llp.codegen.managers.QueryManager;
+import com.mcode.llp.codegen.services.JsonSchemaValidationService;
+import com.mcode.llp.codegen.validators.GenValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

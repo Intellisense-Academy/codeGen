@@ -1,4 +1,4 @@
-package com.mcode.llp.codeGen.models;
+package com.mcode.llp.codegen.models;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.Column;
