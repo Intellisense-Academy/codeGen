@@ -5,6 +5,8 @@ import com.mcode.llp.codegen.models.Schema;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.Map;
 import java.util.*;
@@ -22,20 +24,20 @@ public class SchemaService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public HttpResponse<String> insertSchema(String index, String id, Schema schemaData) throws Exception {
+    public HttpResponse<String> insertSchema(String index, String id, Schema schemaData) throws IOException,InterruptedException {
         String jsonData = objectMapper.writeValueAsString(schemaData);
         String endpoint = "/" + index + "/_doc/" + id;
         return openSearchClient.sendRequest(endpoint, "POST", jsonData);
     }
 
-    public HttpResponse<String> updateSchema(String id, Schema schemaData) throws Exception {
+    public HttpResponse<String> updateSchema(String id, Schema schemaData) throws IOException,InterruptedException {
         String jsonData = objectMapper.writeValueAsString(Map.of("doc", schemaData));
         String endpoint = "/schemas/_update/" + id;
         return openSearchClient.sendRequest(endpoint, "POST", jsonData);
     }
 
 
-    public JsonNode getAllSchema() throws Exception {
+    public JsonNode getAllSchema() throws IOException,InterruptedException {
         String endpoint = "/schemas/_search?filter_path=hits.hits._source";
 
         HttpResponse<String> response = openSearchClient.sendRequest(endpoint, "GET", null);
@@ -64,13 +66,13 @@ public class SchemaService {
             } else {
                 return null;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException | InterruptedException e) {
+            Thread.currentThread().interrupt();
             return null;
         }
     }
 
-    public HttpResponse<String> deleteSchema(String id) throws Exception {
+    public HttpResponse<String> deleteSchema(String id) throws IOException,InterruptedException {
         String endpoint = "/schemas/_doc/"+id;
         return openSearchClient.sendRequest(endpoint, "DELETE", null);
     }
