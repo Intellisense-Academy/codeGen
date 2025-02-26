@@ -5,10 +5,12 @@ import com.mcode.llp.codegen.models.Schema;
 import com.mcode.llp.codegen.services.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.net.http.HttpResponse;
 
 @RestController
@@ -20,6 +22,7 @@ import java.net.http.HttpResponse;
         HttpResponse<String> response ;
         private final SchemaService openSearchService;
 
+        @Autowired
         public SchemaController(SchemaService openSearchService) {
             this.openSearchService = openSearchService;
         }
@@ -29,8 +32,9 @@ import java.net.http.HttpResponse;
             try {
                 response = openSearchService.insertSchema("schemas", schema.getTitle(), schema);
                 return ResponseEntity.status(HttpStatus.CREATED).body(response.body());
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 logger.error(ACTION_2, e.getMessage());
+                Thread.currentThread().interrupt();
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION_1);
             }
         }
@@ -40,7 +44,9 @@ import java.net.http.HttpResponse;
             try {
                 JsonNode responses = openSearchService.getAllSchema();
                 return ResponseEntity.ok(responses);
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
+                logger.error(ACTION_2, e.getMessage());
+                Thread.currentThread().interrupt();
                 return ResponseEntity.internalServerError().body(null);
             }
         }
@@ -64,8 +70,9 @@ import java.net.http.HttpResponse;
             try {
                 response = openSearchService.updateSchema(entityName,schemaData);
                 return ResponseEntity.ok(response.body());
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 logger.error(ACTION_2, e.getMessage());
+                Thread.currentThread().interrupt();
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION_1);
             }
         }
@@ -75,8 +82,9 @@ import java.net.http.HttpResponse;
         try {
             response = openSearchService.deleteSchema(entityName);
             return ResponseEntity.ok(response.body());
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             logger.error(ACTION_2, e.getMessage());
+            Thread.currentThread().interrupt();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION_1);
         }
     }
