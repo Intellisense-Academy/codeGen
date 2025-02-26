@@ -17,8 +17,8 @@ import java.util.Map;
 @Service
 public class GenService {
     private final OpenSearchClient openSearchClient;
-    private static final String ACTION_1 = "_source";
-    private static final String ACTION_2 = "/_doc/";
+    private static final String ACTION1 = "_source";
+    private static final String ACTION2 = "/_doc/";
 
     @Autowired
     public GenService(OpenSearchClient openSearchClient){
@@ -41,25 +41,25 @@ public class GenService {
 
 
     public HttpResponse<String> insertData(String schemaName, String documentId, JsonNode data) throws IOException,InterruptedException {
-        String endpoint = "/" + schemaName + ACTION_2 + documentId;
+        String endpoint = "/" + schemaName + ACTION2 + documentId;
         String requestBody = objectMapper.writeValueAsString(data);
         return openSearchClient.sendRequest(endpoint, "POST", requestBody);
     }
 
     public HttpResponse<String> deleteData(String entityName,String documentId) throws IOException,InterruptedException {
-        String endpoint = "/" + entityName + ACTION_2 +documentId;
+        String endpoint = "/" + entityName + ACTION2 +documentId;
         return openSearchClient.sendRequest(endpoint, "DELETE", null);
     }
 
     public JsonNode getSingleData(String entityName,String documentId) {
-        String endpoint = "/" + entityName + ACTION_2 + documentId;
+        String endpoint = "/" + entityName + ACTION2 + documentId;
         try {
             HttpResponse<String> response = openSearchClient.sendRequest(endpoint, "GET", null);
 
             JsonNode responseJson = objectMapper.readTree(response.body());
 
-            if (responseJson.has(ACTION_1)) {
-                return responseJson.get(ACTION_1);
+            if (responseJson.has(ACTION1)) {
+                return responseJson.get(ACTION1);
             } else {
                 return null;
             }
@@ -79,7 +79,7 @@ public class GenService {
 
         List<JsonNode> data = new ArrayList<>();
         for (JsonNode hit : hitsArray) {
-            JsonNode sourceObject = hit.get(ACTION_1);
+            JsonNode sourceObject = hit.get(ACTION1);
             data.add(sourceObject);
         }
 
