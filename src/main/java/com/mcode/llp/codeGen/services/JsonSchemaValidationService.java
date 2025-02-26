@@ -15,8 +15,13 @@ import java.util.Set;
 @Service
 @Slf4j
 public class JsonSchemaValidationService {
+
+    private final SchemaService schemaService;
+
     @Autowired
-    private SchemaService schemaService;
+    public JsonSchemaValidationService(SchemaService schemaService){
+        this.schemaService=schemaService;
+    }
 
     private JsonSchema jsonSchema;
 

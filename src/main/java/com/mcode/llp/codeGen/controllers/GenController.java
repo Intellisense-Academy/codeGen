@@ -21,7 +21,7 @@ public class GenController {
     private final JsonSchemaValidationService service;
     private final GenService genService;
     private static final Logger logger = LoggerFactory.getLogger(GenController.class);
-    private final String ACTION_2 = "An error {}";
+    private static final String ACTION_2 = "An error {}";
     @Autowired
     public GenController(JsonSchemaValidationService service, GenService genService) {
         this.service = service;
@@ -97,8 +97,9 @@ public class GenController {
             try {
                 JsonNode responses = genService.getAllData(entityName);
                 return ResponseEntity.ok(responses);
-            } catch (Exception e) {
+            } catch (IOException | InterruptedException e) {
                 logger.error(ACTION_2, e.getMessage());
+                Thread.currentThread().interrupt();
                 return ResponseEntity.internalServerError().body(null);
             }
         } else {
