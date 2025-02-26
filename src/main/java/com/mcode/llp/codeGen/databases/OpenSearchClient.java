@@ -1,7 +1,7 @@
 package com.mcode.llp.codegen.databases;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -28,7 +28,7 @@ public class OpenSearchClient {
         return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String sendRequest(String endpoint, String method, String body) throws Exception {
+    public HttpResponse<String> sendRequest(String endpoint, String method, String body) throws IOException,InterruptedException{
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(openSearchUrl + endpoint))
                 .header("Authorization", getAuthHeader())
@@ -50,13 +50,15 @@ public class OpenSearchClient {
             case "DELETE":
                 requestBuilder.DELETE();
                 break;
+            case "HEAD":
+                requestBuilder.method("HEAD", HttpRequest.BodyPublishers.noBody());
+                break;
             default:
                 throw new IllegalArgumentException("Invalid HTTP method: " + method);
         }
 
 
         HttpRequest request = requestBuilder.build();
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return response.body();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 }

@@ -24,13 +24,12 @@ public class JsonSchemaValidationService {
      * Load schema dynamically from database instead of hardcoding.
      */
     private void loadSchema(String entityName) throws IOException {
-        String schemaJson = schemaService.getSchema(entityName).toString();
-
+        JsonNode schemaJson = schemaService.getSchema(entityName);
         if (schemaJson == null) {
             throw new IOException("Schema not found for entity: " + entityName);
         }
 
-        jsonSchema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(schemaJson);
+        jsonSchema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(schemaJson.toString());
     }
 
     /**
