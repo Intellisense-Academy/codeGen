@@ -8,10 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -29,17 +28,13 @@ public class GenController {
     }
 
     @PostMapping("/{entityName}")
-    public ResponseEntity<String>  createEntity(@RequestBody Map<String, Object> requestBody, @PathVariable(value = "entityName") String entityName) {
+    public ResponseEntity<String>  createEntity(@RequestBody JsonNode  requestBody, @PathVariable(value = "entityName") String entityName) {
 
-        // Convert the requestBody to a JsonNode
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode jsonNode = objectMapper.valueToTree(requestBody);
-
-        boolean isJsonExists = service.validateJson(jsonNode, entityName);
-        String documentId = UUID.randomUUID().toString();
+        boolean isEntityValid = service.validateJson(requestBody, entityName);
         try{
-            if(isJsonExists){
-                response=genService.insertData(entityName,documentId,jsonNode);
+            if(isEntityValid){
+                String documentId = UUID.randomUUID().toString();
+                response=genService.insertData(entityName,documentId,requestBody);
                 return ResponseEntity.status(HttpStatus.CREATED).body(response.body());
             }else{
                 return ResponseEntity.badRequest().build();
@@ -54,19 +49,15 @@ public class GenController {
     @DeleteMapping("/{entityName}/{id}")
     public ResponseEntity<String> deleteEntity(@PathVariable("entityName") String entityName, @PathVariable("id") String id) {
 
-        if (Boolean.TRUE.equals(genService.indexExists(entityName))) {
-            if (id != null && !id.isEmpty()) {
+        if (genService.indexExists(entityName)) {
                 try {
-                    response = genService.deleteData(entityName,id);
+                    genService.deleteData(entityName,id);
                     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
                 } catch (IOException | InterruptedException e) {
                     logger.error(ACTION2, e.getMessage());
                     Thread.currentThread().interrupt();
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION2);
                 }
-            } else {
-                return new ResponseEntity<>("ID is required to delete a record.", HttpStatus.BAD_REQUEST);
-            }
         } else {
             return ResponseEntity.badRequest().build();
         }
@@ -74,11 +65,11 @@ public class GenController {
 
     @GetMapping("/{entityName}/{id}")
     public ResponseEntity<JsonNode> viewDataById(@PathVariable("entityName") String entityName, @PathVariable("id") String id) {
-        if(Boolean.TRUE.equals(genService.indexExists(entityName))){
+        if(genService.indexExists(entityName)){
             try {
                 JsonNode responses = genService.getSingleData(entityName,id);
                 if(responses == null){
-                    return ResponseEntity.badRequest().build() ;
+                    return ResponseEntity.notFound().build();
                 }
                 return ResponseEntity.ok(responses);
             } catch (Exception e) {
@@ -92,10 +83,10 @@ public class GenController {
     }
 
     @GetMapping("/{entityName}")
-    public ResponseEntity<JsonNode> viewAllData(@PathVariable("entityName") String entityName) {
-        if (Boolean.TRUE.equals(genService.indexExists(entityName))) {
+    public ResponseEntity<List<JsonNode>> viewAllData(@PathVariable("entityName") String entityName) {
+        if (genService.indexExists(entityName)) {
             try {
-                JsonNode responses = genService.getAllData(entityName);
+                List<JsonNode> responses = genService.getAllData(entityName);
                 return ResponseEntity.ok(responses);
             } catch (IOException | InterruptedException e) {
                 logger.error(ACTION2, e.getMessage());
@@ -108,7 +99,7 @@ public class GenController {
     }
     @PutMapping("/{entityName}/{id}")
     public ResponseEntity<String> updateEntity(@PathVariable String entityName, @PathVariable String id, @RequestBody Map<String, Object> updateData) {
-        if (Boolean.TRUE.equals(genService.indexExists(entityName))) {
+        if (genService.indexExists(entityName)) {
             try {
                 response = genService.updateData(entityName,id,updateData);
                 return ResponseEntity.ok(response.body());

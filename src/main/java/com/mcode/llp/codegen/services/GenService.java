@@ -2,6 +2,8 @@ package com.mcode.llp.codegen.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,8 +19,8 @@ import java.util.Map;
 @Service
 public class GenService {
     private final OpenSearchClient openSearchClient;
-    private static final String ACTION1 = "_source";
-    private static final String ACTION2 = "/_doc/";
+    private static final String SOURCE = "_source";
+    private static final String DOC = "/_doc/";
 
     @Autowired
     public GenService(OpenSearchClient openSearchClient){
@@ -28,7 +30,7 @@ public class GenService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final Logger logger = LoggerFactory.getLogger(GenService.class);
 
-    public Boolean indexExists(String entityName){
+    public boolean indexExists(String entityName){
         try{
             HttpResponse<String> response = openSearchClient.sendRequest("/"+entityName ,"HEAD", null);
             return response.statusCode() == 200;
@@ -41,25 +43,27 @@ public class GenService {
 
 
     public HttpResponse<String> insertData(String schemaName, String documentId, JsonNode data) throws IOException,InterruptedException {
-        String endpoint = "/" + schemaName + ACTION2 + documentId;
+        String endpoint = "/" + schemaName + DOC + documentId;
         String requestBody = objectMapper.writeValueAsString(data);
         return openSearchClient.sendRequest(endpoint, "POST", requestBody);
     }
 
-    public HttpResponse<String> deleteData(String entityName,String documentId) throws IOException,InterruptedException {
-        String endpoint = "/" + entityName + ACTION2 +documentId;
-        return openSearchClient.sendRequest(endpoint, "DELETE", null);
+    public void deleteData(String entityName,String documentId) throws IOException,InterruptedException {
+        String endpoint = "/" + entityName + DOC +documentId;
+        openSearchClient.sendRequest(endpoint, "DELETE", null);
     }
 
     public JsonNode getSingleData(String entityName,String documentId) {
-        String endpoint = "/" + entityName + ACTION2 + documentId;
+        String endpoint = "/" + entityName + DOC + documentId;
         try {
             HttpResponse<String> response = openSearchClient.sendRequest(endpoint, "GET", null);
 
             JsonNode responseJson = objectMapper.readTree(response.body());
 
-            if (responseJson.has(ACTION1)) {
-                return responseJson.get(ACTION1);
+            if (responseJson.has(SOURCE)) {
+                ObjectNode sourceObject = (ObjectNode) responseJson.get(SOURCE); // Convert to ObjectNode
+                sourceObject.put("id", documentId);
+                return sourceObject;
             } else {
                 return null;
             }
@@ -69,21 +73,22 @@ public class GenService {
         }
     }
 
-    public JsonNode getAllData(String entityName) throws IOException,InterruptedException{
-        String endpoint = "/" + entityName + "/_search?filter_path=hits.hits._source";
+    public List<JsonNode> getAllData(String entityName) throws IOException,InterruptedException{
+        String endpoint = "/" + entityName + "/_search?filter_path=hits.hits";
 
         HttpResponse<String> response = openSearchClient.sendRequest(endpoint, "GET", null);
         JsonNode responseJson = objectMapper.readTree(response.body());
 
-        JsonNode hitsArray = responseJson.at("/hits/hits");
+        ArrayNode hitsArray = (ArrayNode) responseJson.at("/hits/hits");
 
         List<JsonNode> data = new ArrayList<>();
         for (JsonNode hit : hitsArray) {
-            JsonNode sourceObject = hit.get(ACTION1);
+            ObjectNode sourceObject = (ObjectNode) hit.get(SOURCE);
+            String id = hit.get("_id").asText();
+            sourceObject.put("id",id);
             data.add(sourceObject);
         }
-
-        return objectMapper.valueToTree(data);
+        return data;
     }
 
     public HttpResponse<String> updateData(String entityName,String id, Map<String, Object> updateData) throws IOException,InterruptedException {
