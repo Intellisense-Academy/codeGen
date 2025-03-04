@@ -10,13 +10,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Set;
 
 @Service
 @Slf4j
 public class JsonSchemaValidationService {
+
+    private final SchemaService schemaService;
+
     @Autowired
-    private SchemaService schemaService;
+    public JsonSchemaValidationService(SchemaService schemaService){
+        this.schemaService=schemaService;
+    }
 
     private JsonSchema jsonSchema;
 
@@ -24,33 +30,34 @@ public class JsonSchemaValidationService {
      * Load schema dynamically from database instead of hardcoding.
      */
     private void loadSchema(String entityName) throws IOException {
-        String schemaJson = schemaService.getSchema(entityName).toString();
-
+        JsonNode schemaJson = schemaService.getSchema(entityName);
         if (schemaJson == null) {
             throw new IOException("Schema not found for entity: " + entityName);
         }
 
-        jsonSchema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(schemaJson);
+        jsonSchema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7).getSchema(schemaJson.toString());
     }
 
     /**
      * Validate JSON against dynamically loaded schema.
      */
-    public boolean validateJson(JsonNode jsonNode, String entityName) {
-        try {
-            loadSchema(entityName); // Load schema dynamically
+    public Set<ValidationMessage> validateJson(JsonNode jsonNode, String entityName) {
 
+        try {
+            loadSchema(entityName);
             Set<ValidationMessage> errors = jsonSchema.validate(jsonNode);
             if (errors.isEmpty()) {
                 log.info("JSON is valid for entity: " + entityName);
-                return true;
             } else {
                 log.info("JSON is invalid for entity: " + entityName);
-                return false;
             }
+            return errors;
         } catch (IOException e) {
-            log.error("Error loading schema: ", e.getMessage());
-            return false;
+            log.error("Error loading schema:", e.getMessage());
+            return Set.of(ValidationMessage.builder()
+                    .code("SCHEMA_LOAD_ERROR")
+                    .message("Internal error: Unable to load schema for entity " + entityName)
+                    .build());
         }
     }
 }
