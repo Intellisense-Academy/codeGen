@@ -1,6 +1,9 @@
 package com.mcode.llp.codegen.controllers;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.services.GenService;
 import com.mcode.llp.codegen.services.JsonSchemaValidationService;
+import com.networknt.schema.ValidationMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +15,7 @@ import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -28,16 +32,20 @@ public class GenController {
     }
 
     @PostMapping("/{entityName}")
-    public ResponseEntity<String>  createEntity(@RequestBody JsonNode  requestBody, @PathVariable(value = "entityName") String entityName) {
+    public ResponseEntity<Object>  createEntity(@RequestBody JsonNode  requestBody, @PathVariable(value = "entityName") String entityName) {
 
-        boolean isEntityValid = service.validateJson(requestBody, entityName);
+        Set<ValidationMessage> isEntityValid = service.validateJson(requestBody, entityName);
         try{
-            if(isEntityValid){
+            if(isEntityValid.isEmpty()){
                 String documentId = UUID.randomUUID().toString();
                 response=genService.insertData(entityName,documentId,requestBody);
                 return ResponseEntity.status(HttpStatus.CREATED).body(response.body());
             }else{
-                return ResponseEntity.badRequest().build();
+                ObjectMapper objectMapper = new ObjectMapper();
+                ObjectNode errorResponse = objectMapper.createObjectNode();
+                errorResponse.put("message", "Validation failed");
+                errorResponse.set("errors", objectMapper.valueToTree(isEntityValid));
+                return ResponseEntity.badRequest().body(errorResponse);
             }
 
         } catch (IOException | InterruptedException e) {

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Set;
 
 @Service
@@ -40,21 +41,23 @@ public class JsonSchemaValidationService {
     /**
      * Validate JSON against dynamically loaded schema.
      */
-    public boolean validateJson(JsonNode jsonNode, String entityName) {
-        try {
-            loadSchema(entityName); // Load schema dynamically
+    public Set<ValidationMessage> validateJson(JsonNode jsonNode, String entityName) {
 
+        try {
+            loadSchema(entityName);
             Set<ValidationMessage> errors = jsonSchema.validate(jsonNode);
             if (errors.isEmpty()) {
                 log.info("JSON is valid for entity: " + entityName);
-                return true;
             } else {
                 log.info("JSON is invalid for entity: " + entityName);
-                return false;
             }
+            return errors;
         } catch (IOException e) {
-            log.error("Error loading schema: ", e.getMessage());
-            return false;
+            log.error("Error loading schema:", e.getMessage());
+            return Set.of(ValidationMessage.builder()
+                    .code("SCHEMA_LOAD_ERROR")
+                    .message("Internal error: Unable to load schema for entity " + entityName)
+                    .build());
         }
     }
 }
