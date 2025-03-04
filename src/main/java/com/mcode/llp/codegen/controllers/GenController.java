@@ -1,6 +1,4 @@
 package com.mcode.llp.codegen.controllers;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.services.GenService;
 import com.mcode.llp.codegen.services.JsonSchemaValidationService;
 import com.networknt.schema.ValidationMessage;
@@ -13,10 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.net.http.HttpResponse;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 public class GenController {
@@ -34,17 +29,19 @@ public class GenController {
     @PostMapping("/{entityName}")
     public ResponseEntity<Object>  createEntity(@RequestBody JsonNode  requestBody, @PathVariable(value = "entityName") String entityName) {
 
-        Set<ValidationMessage> isEntityValid = service.validateJson(requestBody, entityName);
+        Set<String> messages = new HashSet<>();
+        for (ValidationMessage msg : service.validateJson(requestBody, entityName)) {
+            messages.add(msg.getMessage()); // Extracting only the message
+        }
         try{
-            if(isEntityValid.isEmpty()){
+            if(messages.isEmpty()){
                 String documentId = UUID.randomUUID().toString();
                 response=genService.insertData(entityName,documentId,requestBody);
                 return ResponseEntity.status(HttpStatus.CREATED).body(response.body());
             }else{
-                ObjectMapper objectMapper = new ObjectMapper();
-                ObjectNode errorResponse = objectMapper.createObjectNode();
+                Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("message", "Validation failed");
-                errorResponse.set("errors", objectMapper.valueToTree(isEntityValid));
+                errorResponse.put("errors", messages);
                 return ResponseEntity.badRequest().body(errorResponse);
             }
 
