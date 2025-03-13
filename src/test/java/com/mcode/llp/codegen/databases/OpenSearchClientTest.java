@@ -1,0 +1,42 @@
+package com.mcode.llp.codegen.databases;
+
+import java.io.IOException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+@ExtendWith(MockitoExtension.class)
+public class OpenSearchClientTest {
+
+    @Mock
+    private HttpClient httpClient;
+
+    @Mock
+    private HttpResponse<String> httpResponse;
+
+    @InjectMocks
+    private OpenSearchClient openSearchClient;
+
+    @Test
+    void testSendRequest() throws IOException, InterruptedException {
+        ReflectionTestUtils.setField(openSearchClient, "openSearchUrl", "http://dummy:9200");
+        String mockResponseBody = "test";
+
+        when(httpResponse.body()).thenReturn(mockResponseBody);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(httpResponse);
+
+        HttpResponse<String> response = openSearchClient.sendRequest("/schemas", "GET", null);
+
+        assertEquals("test", response.body());
+    }
+}
