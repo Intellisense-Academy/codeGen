@@ -21,7 +21,15 @@ public class OpenSearchClient {
     @Value("${opensearch.password}")
     private String password;
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient;
+
+    public OpenSearchClient(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    public OpenSearchClient() {
+        this.httpClient = HttpClient.newHttpClient();
+    }
 
     private String getAuthHeader() {
         String credentials = username + ":" + password;
