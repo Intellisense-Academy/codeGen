@@ -1,4 +1,5 @@
 package com.mcode.llp.codegen.databases;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.io.IOException;
@@ -27,6 +28,7 @@ public class OpenSearchClient {
         this.httpClient = httpClient;
     }
 
+    @Autowired
     public OpenSearchClient() {
         this.httpClient = HttpClient.newHttpClient();
     }
