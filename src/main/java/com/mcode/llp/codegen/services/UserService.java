@@ -3,7 +3,6 @@ package com.mcode.llp.codegen.services;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
-import com.mcode.llp.codegen.models.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +21,7 @@ public class UserService {
     HttpResponse<String> response ;
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private static final String ERROR = "An error {}";
+    private static final String MESSAGE = "message";
     private final OpenSearchClient client;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -56,7 +56,7 @@ public class UserService {
     public ResponseEntity<Object> isValidUser(String username, String password, String entityName) throws IOException, InterruptedException {
         if (username.isEmpty() || password.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Authentication required. Please provide a username and password."));
+                    .body(Map.of(MESSAGE, "Authentication required. Please provide a username and password."));
         }
         String endpoint = "/users/_search?q=username:" + username;
         try {
@@ -69,14 +69,14 @@ public class UserService {
             JsonNode hits = jsonNode.path("hits").path("hits");
             if (hits.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "No user found"));
+                        .body(Map.of(MESSAGE, "No user found"));
             }
 
             // Extract user details
             JsonNode userData = hits.get(0).path("_source");
             if (userData.isMissingNode()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "User data not found"));
+                        .body(Map.of(MESSAGE, "User data not found"));
             }
 
             // Get user details
@@ -88,11 +88,11 @@ public class UserService {
             // Validate username and password
             if (!storedUsername.equals(username) || !storedPassword.equals(password)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Invalid username or password"));
+                        .body(Map.of(MESSAGE, "Invalid username or password"));
             }
 
             if(entityName.equals("users") && !storedRole.equals("superuser")){
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message","no permission to access the superAdmin"));
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(MESSAGE,"no permission to access the superAdmin"));
             }
 
 
@@ -103,7 +103,7 @@ public class UserService {
             logger.error(ERROR, e.getMessage());
             Thread.currentThread().interrupt();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Internal Server Error"));
+                    .body(Map.of(MESSAGE, "Internal Server Error"));
         }
     }
 
