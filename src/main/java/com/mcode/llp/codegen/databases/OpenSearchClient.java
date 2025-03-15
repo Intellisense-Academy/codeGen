@@ -1,4 +1,5 @@
 package com.mcode.llp.codegen.databases;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.io.IOException;
@@ -21,7 +22,16 @@ public class OpenSearchClient {
     @Value("${opensearch.password}")
     private String password;
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient;
+
+    public OpenSearchClient(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    @Autowired
+    public OpenSearchClient() {
+        this.httpClient = HttpClient.newHttpClient();
+    }
 
     private String getAuthHeader() {
         String credentials = username + ":" + password;

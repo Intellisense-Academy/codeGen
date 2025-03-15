@@ -1,38 +1,45 @@
 package com.mcode.llp.codegen.services;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
+import com.networknt.schema.ValidationMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class GenService {
     private final OpenSearchClient openSearchClient;
+    private final JsonSchemaValidationService service;
+    private final UserService userService;
+    HttpResponse<String> response ;
     private static final String SOURCE = "_source";
     private static final String DOC = "/_doc/";
-
-    @Autowired
-    public GenService(OpenSearchClient openSearchClient){
-        this.openSearchClient=openSearchClient;
-    }
-
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final Logger logger = LoggerFactory.getLogger(GenService.class);
+    private static final String ERROR = "An error {}";
+
+    @Autowired
+    public GenService(OpenSearchClient openSearchClient,UserService userService,JsonSchemaValidationService service){
+        this.openSearchClient=openSearchClient;
+        this.userService = userService;
+        this.service = service;
+    }
 
     public boolean indexExists(String entityName){
         try{
-            HttpResponse<String> response = openSearchClient.sendRequest("/"+entityName ,"HEAD", null);
+            response = openSearchClient.sendRequest("/"+entityName ,"HEAD", null);
             return response.statusCode() == 200;
         } catch (IOException | InterruptedException e) {
             logger.error(e.getMessage());
@@ -40,12 +47,49 @@ public class GenService {
             return false;
         }
     }
+    
+    public Map<String, Object> addtenent(Object responseBody,JsonNode data){
+        Map<String, Object> responseData = objectMapper.convertValue(responseBody, new TypeReference<HashMap<String, Object>>() {});
+        String tenant = (String) responseData.get("tenant");
+        Map<String, Object> requestData = objectMapper.convertValue(data,new TypeReference<HashMap<String, Object>>() {});
+        if (tenant != null) {
+            requestData.put("tenant", tenant);
+        }
+        return requestData;
+    }
 
-
-    public HttpResponse<String> insertData(String schemaName, String documentId, JsonNode data) throws IOException,InterruptedException {
-        String endpoint = "/" + schemaName + DOC + documentId;
-        String requestBody = objectMapper.writeValueAsString(data);
-        return openSearchClient.sendRequest(endpoint, "POST", requestBody);
+    public ResponseEntity<Object> insertData(String username, String password, String schemaName, JsonNode data) throws IOException,InterruptedException {
+        try{
+            ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password,schemaName);
+            if (userValidResponse.getStatusCode() == HttpStatus.OK) {
+                Set<String> messages = new HashSet<>();
+                for (ValidationMessage msg : service.validateJson(data, schemaName)) {
+                    messages.add(msg.getMessage()); // Extracting only the message
+                }if(messages.isEmpty()){
+                    String requestBody;
+                    if(!schemaName.equals("users")){
+                        requestBody=objectMapper.writeValueAsString(addtenent(userValidResponse.getBody(),data));
+                    }else{
+                        requestBody=objectMapper.writeValueAsString(data);
+                    }
+                    String documentId = UUID.randomUUID().toString();
+                    String endpoint = "/" + schemaName + DOC + documentId;
+                    response= openSearchClient.sendRequest(endpoint, "POST", requestBody);
+                    return ResponseEntity.status(HttpStatus.CREATED).body(response.body());
+                }else{
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("message", "Validation failed");
+                    errorResponse.put("errors", messages);
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+            }else{
+                    return userValidResponse;
+            }
+        }catch (IOException | InterruptedException e){
+            logger.error(ERROR, e.getMessage());
+            Thread.currentThread().interrupt();
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
     }
 
     public void deleteData(String entityName,String documentId) throws IOException,InterruptedException {
@@ -56,7 +100,7 @@ public class GenService {
     public JsonNode getSingleData(String entityName,String documentId) {
         String endpoint = "/" + entityName + DOC + documentId;
         try {
-            HttpResponse<String> response = openSearchClient.sendRequest(endpoint, "GET", null);
+             response = openSearchClient.sendRequest(endpoint, "GET", null);
 
             JsonNode responseJson = objectMapper.readTree(response.body());
 
@@ -76,7 +120,7 @@ public class GenService {
     public List<JsonNode> getAllData(String entityName) throws IOException,InterruptedException{
         String endpoint = "/" + entityName + "/_search?filter_path=hits.hits";
 
-        HttpResponse<String> response = openSearchClient.sendRequest(endpoint, "GET", null);
+        response = openSearchClient.sendRequest(endpoint, "GET", null);
         JsonNode responseJson = objectMapper.readTree(response.body());
 
         ArrayNode hitsArray = (ArrayNode) responseJson.at("/hits/hits");
