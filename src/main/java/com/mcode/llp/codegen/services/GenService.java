@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -48,7 +49,7 @@ public class GenService {
         }
     }
     
-    public Map<String, Object> addtenent(Object responseBody,JsonNode data){
+    public Map<String, Object> addTencent(Object responseBody, JsonNode data){
         Map<String, Object> responseData = objectMapper.convertValue(responseBody, new TypeReference<HashMap<String, Object>>() {});
         String tenant = (String) responseData.get("tenant");
         Map<String, Object> requestData = objectMapper.convertValue(data,new TypeReference<HashMap<String, Object>>() {});
@@ -60,17 +61,17 @@ public class GenService {
 
     public ResponseEntity<Object> insertData(String username, String password, String schemaName, JsonNode data) throws IOException,InterruptedException {
         try{
-            ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password,schemaName);
+            ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password,schemaName,"POST");
             if (userValidResponse.getStatusCode() == HttpStatus.OK) {
                 Set<String> messages = new HashSet<>();
                 for (ValidationMessage msg : service.validateJson(data, schemaName)) {
                     messages.add(msg.getMessage()); // Extracting only the message
                 }if(messages.isEmpty()){
                     String requestBody;
-                    if(!schemaName.equals("users")){
-                        requestBody=objectMapper.writeValueAsString(addtenent(userValidResponse.getBody(),data));
-                    }else{
+                    if(data.has("tenant")){
                         requestBody=objectMapper.writeValueAsString(data);
+                    }else{
+                        requestBody=objectMapper.writeValueAsString(addTencent(userValidResponse.getBody(),data));
                     }
                     String documentId = UUID.randomUUID().toString();
                     String endpoint = "/" + schemaName + DOC + documentId;
@@ -92,53 +93,86 @@ public class GenService {
         }
     }
 
-    public void deleteData(String entityName,String documentId) throws IOException,InterruptedException {
-        String endpoint = "/" + entityName + DOC +documentId;
-        openSearchClient.sendRequest(endpoint, "DELETE", null);
+    public ResponseEntity<Object> deleteData(String username, String password, String entityName,String documentId) throws IOException,InterruptedException {
+        try{
+            ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password,entityName,"DELETE");
+            if (userValidResponse.getStatusCode() == HttpStatus.OK) {
+                String endpoint = "/" + entityName + DOC + documentId;
+                openSearchClient.sendRequest(endpoint, "DELETE", null);
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }else{
+                return userValidResponse;
+            }
+        }catch (IOException | InterruptedException e){
+            logger.error(ERROR, e.getMessage());
+            Thread.currentThread().interrupt();
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
     }
 
-    public JsonNode getSingleData(String entityName,String documentId) {
-        String endpoint = "/" + entityName + DOC + documentId;
+    public ResponseEntity<Object> getSingleData(String username, String password, String entityName,String documentId) {
         try {
-             response = openSearchClient.sendRequest(endpoint, "GET", null);
+            ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password,entityName,"GET");
+            if (userValidResponse.getStatusCode() == HttpStatus.OK) {
+                String endpoint = "/" + entityName + DOC + documentId;
+                response = openSearchClient.sendRequest(endpoint, "GET", null);
+                JsonNode responseJson = objectMapper.readTree(response.body());
 
-            JsonNode responseJson = objectMapper.readTree(response.body());
-
-            if (responseJson.has(SOURCE)) {
-                ObjectNode sourceObject = (ObjectNode) responseJson.get(SOURCE); // Convert to ObjectNode
-                sourceObject.put("id", documentId);
-                return sourceObject;
-            } else {
-                return null;
+                if (responseJson.has(SOURCE)) {
+                    ObjectNode sourceObject = (ObjectNode) responseJson.get(SOURCE); // Convert to ObjectNode
+                    sourceObject.put("id", documentId);
+                    return ResponseEntity.ok(sourceObject);
+                } else {
+                    return null;
+                }
+            }else{
+                return userValidResponse;
             }
+
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;
         }
     }
 
-    public List<JsonNode> getAllData(String entityName) throws IOException,InterruptedException{
-        String endpoint = "/" + entityName + "/_search?filter_path=hits.hits";
+    public ResponseEntity<Object> getAllData(String username, String password, String entityName) throws IOException,InterruptedException{
+        ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password, entityName, "GET");
 
-        response = openSearchClient.sendRequest(endpoint, "GET", null);
-        JsonNode responseJson = objectMapper.readTree(response.body());
+        if (userValidResponse.getStatusCode() == HttpStatus.OK) {
+            Object responseBody = userValidResponse.getBody();
+            Map<String, Object> responseData = objectMapper.convertValue(responseBody, new TypeReference<HashMap<String, Object>>() {});
+            String tenant = (String) responseData.get("tenant");
+            String endpoint = "/" + entityName + "/_search?q=tenant:"+tenant;
+            response = openSearchClient.sendRequest(endpoint, "GET", null);
+            JsonNode responseJson = objectMapper.readTree(response.body());
 
-        ArrayNode hitsArray = (ArrayNode) responseJson.at("/hits/hits");
+            ArrayNode hitsArray = (ArrayNode) responseJson.at("/hits/hits");
 
-        List<JsonNode> data = new ArrayList<>();
-        for (JsonNode hit : hitsArray) {
-            ObjectNode sourceObject = (ObjectNode) hit.get(SOURCE);
-            String id = hit.get("_id").asText();
-            sourceObject.put("id",id);
-            data.add(sourceObject);
+            List<JsonNode> data = new ArrayList<>();
+            for (JsonNode hit : hitsArray) {
+                ObjectNode sourceObject = (ObjectNode) hit.get(SOURCE);
+                String id = hit.get("_id").asText();
+                sourceObject.put("id",id);
+                data.add(sourceObject);
+            }
+            return ResponseEntity.ok(data);
+        }else{
+            return userValidResponse;
         }
-        return data;
     }
 
-    public HttpResponse<String> updateData(String entityName,String id, Map<String, Object> updateData) throws IOException,InterruptedException {
-        String jsonData = objectMapper.writeValueAsString(Map.of("doc", updateData));
-        String endpoint = "/" + entityName + "/_update/" + id;
-        return openSearchClient.sendRequest(endpoint, "POST", jsonData);
+    public ResponseEntity<Object> updateData(String username, String password, String entityName,String id, Map<String, Object> updateData) throws IOException,InterruptedException {
+        ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password, entityName, "PUT");
+
+        if (userValidResponse.getStatusCode() == HttpStatus.OK) {
+            String jsonData = objectMapper.writeValueAsString(Map.of("doc", updateData));
+            String endpoint = "/" + entityName + "/_update/" + id;
+            HttpResponse<String> httpResponse =openSearchClient.sendRequest(endpoint, "POST", jsonData);
+            String responseBody = httpResponse.body();
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(objectMapper.readValue(responseBody, Map.class));
+        }else{
+            return userValidResponse;
+        }
     }
 
 }
