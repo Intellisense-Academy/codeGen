@@ -25,6 +25,7 @@ public class GenService {
     private final JsonSchemaValidationService service;
     private final UserService userService;
     HttpResponse<String> response ;
+    private static final String TENENT = "tenant";
     private static final String SOURCE = "_source";
     private static final String DOC = "/_doc/";
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -51,10 +52,10 @@ public class GenService {
     
     public Map<String, Object> addTencent(Object responseBody, JsonNode data){
         Map<String, Object> responseData = objectMapper.convertValue(responseBody, new TypeReference<HashMap<String, Object>>() {});
-        String tenant = (String) responseData.get("tenant");
+        String tenant = (String) responseData.get(TENENT);
         Map<String, Object> requestData = objectMapper.convertValue(data,new TypeReference<HashMap<String, Object>>() {});
         if (tenant != null) {
-            requestData.put("tenant", tenant);
+            requestData.put(TENENT, tenant);
         }
         return requestData;
     }
@@ -68,7 +69,7 @@ public class GenService {
                     messages.add(msg.getMessage()); // Extracting only the message
                 }if(messages.isEmpty()){
                     String requestBody;
-                    if(data.has("tenant")){
+                    if(data.has(TENENT)){
                         requestBody=objectMapper.writeValueAsString(data);
                     }else{
                         requestBody=objectMapper.writeValueAsString(addTencent(userValidResponse.getBody(),data));
@@ -141,7 +142,7 @@ public class GenService {
         if (userValidResponse.getStatusCode() == HttpStatus.OK) {
             Object responseBody = userValidResponse.getBody();
             Map<String, Object> responseData = objectMapper.convertValue(responseBody, new TypeReference<HashMap<String, Object>>() {});
-            String tenant = (String) responseData.get("tenant");
+            String tenant = (String) responseData.get(TENENT);
             String endpoint = "/" + entityName + "/_search?q=tenant:"+tenant;
             response = openSearchClient.sendRequest(endpoint, "GET", null);
             JsonNode responseJson = objectMapper.readTree(response.body());

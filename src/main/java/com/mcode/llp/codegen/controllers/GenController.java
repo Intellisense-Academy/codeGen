@@ -16,7 +16,7 @@ import java.util.*;
 
 @RestController
 public class GenController {
-    HttpResponse<String> response ;
+    ResponseEntity<Object> response ;
     private final UserService userService;
     private final GenService genService;
     private static final Logger logger = LoggerFactory.getLogger(GenController.class);
@@ -109,7 +109,7 @@ public class GenController {
                 String[] credentials = userService.extractCredentials(authHeader);
                 String username = credentials[0];
                 String password = credentials[1];
-                ResponseEntity<Object> response = genService.updateData(username, password, entityName, id, updateData);
+                response = genService.updateData(username, password, entityName, id, updateData);
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(response.getBody());
             } catch (IOException | InterruptedException e) {
                 logger.error(ACTION2, e.getMessage());

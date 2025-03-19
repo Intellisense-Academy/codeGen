@@ -91,12 +91,12 @@ public class UserService {
                         .body(Map.of(MESSAGE, "Invalid username or password"));
             }
 
-            ResponseEntity<Object> response = isAuthorizedUser(entityName,storedRole,operation);
+            ResponseEntity<Object> responseData = isAuthorizedUser(entityName,storedRole,operation);
 
-            if(response.getStatusCode()==HttpStatus.OK){
+            if(responseData.getStatusCode()==HttpStatus.OK){
                 return ResponseEntity.ok(Map.of("tenant", storedTenet));
             }else{
-                return response;
+                return responseData;
             }
 
         } catch (IOException | InterruptedException e) {
