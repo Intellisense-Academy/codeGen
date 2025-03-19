@@ -22,36 +22,84 @@ public class Initializer {
         this.openSearchClient = openSearchClient;
     }
 
+    private void superUserSchemaInitialize() throws IOException,InterruptedException{
+        // Check if the schema exists
+        response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+USER_INDEX,"GET", null);
+        if(response.statusCode() == 404){
+            String requestData = "{\"title\":\"users\",\"properties\":{\"username\":{\"type\":\"string\"},\"password\":{\"type\":\"string\"},\"role\":{\"type\":\"string\"},\"tenant\":{\"type\":\"string\"}},\"required\":[\"username\",\"password\",\"role\",\"tenant\"]}";
+            response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+USER_INDEX, "POST", requestData);
+            if (response.statusCode() == 201) {
+                logger.info("✅ User Schema created successfully.");
+            } else {
+                if (logger.isErrorEnabled()) {
+                    logger.error(ERROR, response.body());
+                }
+            }
+        } else {
+            logger.info("✅ User Schema already exists. Skipping initialization.");
+        }
+    }
+
+    private void superUserIndexInitialize() throws IOException,InterruptedException{
+        // Check if the index exists
+        response = openSearchClient.sendRequest("/" + USER_INDEX, "GET", null);
+        if (response.statusCode() == 404) {
+            String requestData= "{\"username\":\"superadmin\",\"password\":\"SuperSecurePassword\",\"role\":\"superuser\",\"tenant\":\"global\"}";
+            String endpoint = "/" + USER_INDEX + "/_doc/" + 1;
+            response=openSearchClient.sendRequest(endpoint, "POST", requestData);
+            if (response.statusCode() == 201) {
+                logger.info("✅ superUser index created successfully.");
+            } else {
+                if (logger.isErrorEnabled()) {
+                    logger.error(ERROR, response.body());
+                }
+            }
+        } else {
+            logger.info("✅ User index already exists. Skipping initialization.");
+        }
+    }
+
+    private void permissionSchemaInitialize() throws IOException,InterruptedException{
+        // Check if the permission schema exists
+        response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+PERMISSION_INDEX,"GET", null);
+        if(response.statusCode() == 404){
+            String requestData = "{\"title\":\"permission\",\"properties\":{\"entity\":{\"type\":\"string\"},\"roles\":{\"type\":\"array\"},\"operation\":{\"type\":\"array\"}},\"required\":[\"entity\",\"roles\",\"operation\"]}";
+            response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+PERMISSION_INDEX, "POST", requestData);
+            if (response.statusCode() == 201) {
+                logger.info("✅ Permission Schema created successfully.");
+            } else {
+                if (logger.isErrorEnabled()) {
+                    logger.error(ERROR, response.body());
+                }
+            }
+        } else {
+            logger.info("✅ Permission Schema already exists. Skipping initialization.");
+        }
+    }
+
+    private void permissionIndexInitialize() throws IOException,InterruptedException{
+        // Check if the permission index exists
+        response = openSearchClient.sendRequest("/" + PERMISSION_INDEX, "GET", null);
+        if (response.statusCode() == 404) {
+            String requestData = "{\"entity\":\"users\",\"roles\":[\"superuser\"],\"operation\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"]}";
+            String endpoint = "/" + PERMISSION_INDEX + "/_doc/" + 1;
+            response=openSearchClient.sendRequest(endpoint, "POST", requestData);
+            if (response.statusCode() == 201) {
+                logger.info("✅ permission index created successfully.");
+            } else {
+                if (logger.isErrorEnabled()) {
+                    logger.error(ERROR, response.body());
+                }
+            }
+        } else {
+            logger.info("✅ permission index already exists. Skipping initialization.");
+        }
+    }
+
     public void superUserInitialize() {
         try {
-            // Check if the schema exists
-            response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+USER_INDEX,"GET", null);
-            if(response.statusCode() == 404){
-                String requestData = "{\"title\":\"users\",\"properties\":{\"username\":{\"type\":\"string\"},\"password\":{\"type\":\"string\"},\"role\":{\"type\":\"string\"},\"tenant\":{\"type\":\"string\"}},\"required\":[\"username\",\"password\",\"role\",\"tenant\"]}";
-                response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+USER_INDEX, "POST", requestData);
-                if (response.statusCode() == 201) {
-                    logger.info("✅ User Schema created successfully.");
-                } else {
-                        logger.error(ERROR , response.body());
-                }
-            } else {
-                logger.info("✅ User Schema already exists. Skipping initialization.");
-            }
-            // Check if the index exists
-            response = openSearchClient.sendRequest("/" + USER_INDEX, "GET", null);
-            if (response.statusCode() == 404) {
-                String requestData= "{\"username\":\"superadmin\",\"password\":\"SuperSecurePassword\",\"role\":\"superuser\",\"tenant\":\"global\"}";
-                String endpoint = "/" + USER_INDEX + "/_doc/" + 1;
-               response=openSearchClient.sendRequest(endpoint, "POST", requestData);
-                if (response.statusCode() == 201) {
-                    logger.info("✅ superUser index created successfully.");
-                } else {
-                        logger.error(ERROR , response.body());
-                }
-            } else {
-                logger.info("✅ User index already exists. Skipping initialization.");
-            }
-
+            superUserSchemaInitialize();
+            superUserIndexInitialize();
         } catch (IOException | InterruptedException e) {
             logger.error(ERROR, e.getMessage());
             Thread.currentThread().interrupt();
@@ -60,34 +108,8 @@ public class Initializer {
 
     public void permissionInitialize(){
         try{
-            // Check if the permission schema exists
-            response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+PERMISSION_INDEX,"GET", null);
-            if(response.statusCode() == 404){
-                String requestData = "{\"title\":\"permission\",\"properties\":{\"entity\":{\"type\":\"string\"},\"roles\":{\"type\":\"array\"},\"operation\":{\"type\":\"array\"}},\"required\":[\"entity\",\"roles\",\"operation\"]}";
-                response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+PERMISSION_INDEX, "POST", requestData);
-                if (response.statusCode() == 201) {
-                    logger.info("✅ Permission Schema created successfully.");
-                } else {
-                    logger.error(ERROR , response.body());
-                }
-            } else {
-                logger.info("✅ Permission Schema already exists. Skipping initialization.");
-            }
-
-            // Check if the permission index exists
-            response = openSearchClient.sendRequest("/" + PERMISSION_INDEX, "GET", null);
-            if (response.statusCode() == 404) {
-                String requestData = "{\"entity\":\"users\",\"roles\":[\"superuser\"],\"operation\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"]}";
-                String endpoint = "/" + PERMISSION_INDEX + "/_doc/" + 1;
-                response=openSearchClient.sendRequest(endpoint, "POST", requestData);
-                if (response.statusCode() == 201) {
-                    logger.info("✅ permission index created successfully.");
-                } else {
-                    logger.error(ERROR , response.body());
-                }
-            } else {
-                logger.info("✅ permission index already exists. Skipping initialization.");
-            }
+            permissionSchemaInitialize();
+            permissionIndexInitialize();
         }catch (IOException | InterruptedException e){
             logger.error(ERROR, e.getMessage());
             Thread.currentThread().interrupt();
