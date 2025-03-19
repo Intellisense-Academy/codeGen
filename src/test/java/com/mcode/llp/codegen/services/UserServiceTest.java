@@ -67,7 +67,6 @@ class UserServiceTest {
 
         when(openSearchClient.sendRequest(eq("/users/_search?q=username:" + username), eq("GET"), isNull())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(jsonResponse);
-        //when(userService.isAuthorizedUser(entityName, "admin", operation)).thenReturn(true);
 
         String jsonResponse1 = "{ \"hits\": { \"hits\": [ { \"_source\": { \"roles\": [\"admin\"], \"operation\": [\"read\", \"write\"] } } ] } }";
 
