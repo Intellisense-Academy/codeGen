@@ -91,14 +91,13 @@ public class UserService {
                         .body(Map.of(MESSAGE, "Invalid username or password"));
             }
 
-            ResponseEntity<Object> responseData = isAuthorizedUser(entityName,storedRole,operation);
-
-            if(responseData.getStatusCode()==HttpStatus.OK){
+            boolean responseData = isAuthorizedUser(entityName,storedRole,operation);
+            if(responseData){
                 return ResponseEntity.ok(Map.of("tenant", storedTenet));
             }else{
-                return responseData;
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(MESSAGE, "Your are not permitted to access"));
             }
-
         } catch (IOException | InterruptedException e) {
             logger.error(ERROR, e.getMessage());
             Thread.currentThread().interrupt();
@@ -107,10 +106,9 @@ public class UserService {
         }
     }
 
-    public ResponseEntity<Object> isAuthorizedUser(String entityName, String role, String operation) throws IOException, InterruptedException {
+    public boolean isAuthorizedUser(String entityName, String role, String operation) throws IOException, InterruptedException {
         String endpoint = "/permission/_search?q=entity:" + entityName + "+AND+roles:" + role;
 
-        try{
             response = client.sendRequest(endpoint, "GET", null);
             // Parse JSON response
             JsonNode jsonNode = objectMapper.readTree(response.body());
@@ -118,38 +116,31 @@ public class UserService {
             // Extract hits array
             JsonNode hits = jsonNode.path("hits").path("hits");
             if (hits.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of(MESSAGE, "Your are not permitted to access"));
+                return false;
             }
 
             // Extract permission details
             JsonNode permissionData = hits.get(0).path("_source");
             if (permissionData.isMissingNode()) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of(MESSAGE, "Your are not permitted to access"));
+                return false;
             }
 
-            JsonNode roles = permissionData.path("roles");
-            JsonNode operations = permissionData.path("operation");
-            if (roles.isArray() && operations.isArray()) {
-                for (JsonNode currentRole : roles) {
-                    if (currentRole.asText().equals(role)) {
-                        for (JsonNode currentOperation : operations) {
-                            if (currentOperation.asText().equals(operation)) {
-                                return ResponseEntity.ok("Role and operation found");
-                            }
+            return rolesAndOperationCheck(role, operation, permissionData);
+    }
+
+    private static boolean rolesAndOperationCheck(String role, String operation, JsonNode permissionData) {
+        JsonNode roles = permissionData.path("roles");
+        JsonNode operations = permissionData.path("operation");
+            for (JsonNode currentRole : roles) {
+                if (currentRole.asText().equals(role)) {
+                    for (JsonNode currentOperation : operations) {
+                        if (currentOperation.asText().equals(operation)) {
+                            return true;
                         }
                     }
                 }
             }
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of(MESSAGE, "your are not allowed to "+operation+" the "+entityName));
-        }catch (IOException | InterruptedException e) {
-            logger.error(ERROR, e.getMessage());
-            Thread.currentThread().interrupt();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(MESSAGE, "Internal Server Error"));
-        }
+        return false;
     }
 
 }
