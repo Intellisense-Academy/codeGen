@@ -26,8 +26,6 @@ class SchemaServiceTest {
     @InjectMocks
     private SchemaService schemaService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     @BeforeEach
     void setUp() {
         schemaService = new SchemaService(openSearchClient);
