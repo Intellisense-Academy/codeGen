@@ -6,16 +6,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
-import java.net.http.HttpResponse;
 import java.util.*;
 
 @RestController
 public class GenController {
-    HttpResponse<String> response ;
+    ResponseEntity<Object> response ;
     private final UserService userService;
     private final GenService genService;
     private static final Logger logger = LoggerFactory.getLogger(GenController.class);
@@ -43,16 +43,18 @@ public class GenController {
     }
 
     @DeleteMapping("/{entityName}/{id}")
-    public ResponseEntity<String> deleteEntity(@PathVariable("entityName") String entityName, @PathVariable("id") String id) {
+    public ResponseEntity<Object> deleteEntity(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,@PathVariable("entityName") String entityName, @PathVariable("id") String id) {
 
         if (genService.indexExists(entityName)) {
                 try {
-                    genService.deleteData(entityName,id);
-                    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+                    String[] credentials = userService.extractCredentials(authHeader);
+                    String username = credentials[0];
+                    String password = credentials[1];
+                    return genService.deleteData(username,password,entityName,id);
                 } catch (IOException | InterruptedException e) {
                     logger.error(ACTION2, e.getMessage());
                     Thread.currentThread().interrupt();
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION2);
+                    return ResponseEntity.internalServerError().body(e.getMessage());
                 }
         } else {
             return ResponseEntity.badRequest().build();
@@ -60,14 +62,17 @@ public class GenController {
     }
 
     @GetMapping("/{entityName}/{id}")
-    public ResponseEntity<JsonNode> viewDataById(@PathVariable("entityName") String entityName, @PathVariable("id") String id) {
+    public ResponseEntity<Object> viewDataById(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,@PathVariable("entityName") String entityName, @PathVariable("id") String id) {
         if(genService.indexExists(entityName)){
             try {
-                JsonNode responses = genService.getSingleData(entityName,id);
+                String[] credentials = userService.extractCredentials(authHeader);
+                String username = credentials[0];
+                String password = credentials[1];
+                ResponseEntity<Object> responses = genService.getSingleData(username,password,entityName,id);
                 if(responses == null){
                     return ResponseEntity.notFound().build();
                 }
-                return ResponseEntity.ok(responses);
+                return responses;
             } catch (Exception e) {
                 logger.error(ACTION2, e.getMessage());
                 return ResponseEntity.internalServerError().body(null);
@@ -79,11 +84,13 @@ public class GenController {
     }
 
     @GetMapping("/{entityName}")
-    public ResponseEntity<List<JsonNode>> viewAllData(@PathVariable("entityName") String entityName) {
+    public ResponseEntity<Object> viewAllData(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,@PathVariable("entityName") String entityName) {
         if (genService.indexExists(entityName)) {
             try {
-                List<JsonNode> responses = genService.getAllData(entityName);
-                return ResponseEntity.ok(responses);
+                String[] credentials = userService.extractCredentials(authHeader);
+                String username = credentials[0];
+                String password = credentials[1];
+                return genService.getAllData(username,password,entityName);
             } catch (IOException | InterruptedException e) {
                 logger.error(ACTION2, e.getMessage());
                 Thread.currentThread().interrupt();
@@ -93,19 +100,23 @@ public class GenController {
             return ResponseEntity.badRequest().build();
         }
     }
+
     @PutMapping("/{entityName}/{id}")
-    public ResponseEntity<String> updateEntity(@PathVariable String entityName, @PathVariable String id, @RequestBody Map<String, Object> updateData) {
+    public ResponseEntity<Object> updateEntity(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,@PathVariable String entityName, @PathVariable String id, @RequestBody Map<String, Object> updateData) {
         if (genService.indexExists(entityName)) {
             try {
-                response = genService.updateData(entityName,id,updateData);
-                return ResponseEntity.ok(response.body());
+                String[] credentials = userService.extractCredentials(authHeader);
+                String username = credentials[0];
+                String password = credentials[1];
+                response = genService.updateData(username, password, entityName, id, updateData);
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(response.getBody());
             } catch (IOException | InterruptedException e) {
                 logger.error(ACTION2, e.getMessage());
                 Thread.currentThread().interrupt();
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ACTION2);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).contentType(MediaType.APPLICATION_JSON).body(Map.of("error", ACTION2));
             }
         }else{
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().contentType(MediaType.APPLICATION_JSON).body(Map.of("error", "Invalid entity name"));
         }
     }
 }

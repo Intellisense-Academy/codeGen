@@ -1,6 +1,6 @@
 package com.mcode.llp.codegen;
 
-import com.mcode.llp.codegen.initializer.SuperUserInitializer;
+import com.mcode.llp.codegen.initializer.Initializer;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
@@ -13,10 +13,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 public class CodeGenApplication implements ApplicationRunner{
 
-	private final SuperUserInitializer superUserInitializer;
+	private final Initializer initializer;
 
-	public CodeGenApplication(SuperUserInitializer superUserInitializer) {
-		this.superUserInitializer = superUserInitializer;
+	public CodeGenApplication(Initializer initializer) {
+		this.initializer = initializer;
 	}
 
 	public static void main(String[] args) {
@@ -25,7 +25,8 @@ public class CodeGenApplication implements ApplicationRunner{
 
 	@Override
 	public void run(ApplicationArguments args) {
-		superUserInitializer.initializeOpenSearch();
+		initializer.superUserInitialize();
+		initializer.permissionInitialize();
 	}
 
 	// CORS Configuration
