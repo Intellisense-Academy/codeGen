@@ -52,24 +52,23 @@
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.8</version>
 				<executions>
-					<!-- Prepares the JaCoCo agent -->
 					<execution>
 						<id>prepare-agent</id>
 						<goals>
 							<goal>prepare-agent</goal>
 						</goals>
 					</execution>
-
-					<!-- Generates the coverage report -->
 					<execution>
 						<id>report</id>
 						<phase>verify</phase>
 						<goals>
 							<goal>report</goal>
+							<goal>report-aggregate</goal> <!-- Add this for multi-module projects -->
 						</goals>
 					</execution>
 				</executions>
 			</plugin>
+
 
 		</plugins>
 	</build>
