@@ -7,6 +7,8 @@ import java.net.http.HttpResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -68,6 +70,65 @@ class OpenSearchClientTest {
         HttpResponse<String> response = openSearchClient.sendRequest("/schemas/_doc/"+id, "DELETE", null);
 
         assertEquals("delete", response.body());
+    }
+    @Test
+    void getSendRequest() throws IOException, InterruptedException {
+        ReflectionTestUtils.setField(openSearchClient, "openSearchUrl", "http://dummy:9200");
+        String mockResponseBody = "get";
+
+        when(httpResponse.body()).thenReturn(mockResponseBody);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(httpResponse);
+
+        String id = "1";
+
+        HttpResponse<String> response = openSearchClient.sendRequest("/schemas/_doc/"+id, "GET", null);
+
+        assertEquals("get", response.body());
+    }
+    @Test
+    void putSendRequest() throws IOException, InterruptedException {
+        ReflectionTestUtils.setField(openSearchClient, "openSearchUrl", "http://dummy:9200");
+        String mockResponseBody = "put";
+
+        when(httpResponse.body()).thenReturn(mockResponseBody);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(httpResponse);
+
+        String requestBody = "{\"title\":\"updateTesting\",\"properties\":{\"testerName\":{\"type\":\"string\"},\"password\":{\"type\":\"number\"}},\"required\":[\"testerName\",\"password\"]}";
+
+        String id = "1";
+
+        HttpResponse<String> response = openSearchClient.sendRequest("/schemas/_update/"+id, "PUT", requestBody);
+
+        assertEquals("put", response.body());
+    }
+    @Test
+    void headSendRequest() throws IOException, InterruptedException {
+        ReflectionTestUtils.setField(openSearchClient, "openSearchUrl", "http://dummy:9200");
+        String mockResponseBody = "200";
+
+        when(httpResponse.body()).thenReturn(mockResponseBody);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(httpResponse);
+
+        HttpResponse<String> response = openSearchClient.sendRequest("/schemas", "HEAD", null);
+
+        assertEquals("200", response.body());
+    }
+    @Test
+    void testSendRequest_WithInvalidMethod_ShouldThrowException() {
+        // Set OpenSearch URL using ReflectionTestUtils
+        ReflectionTestUtils.setField(openSearchClient, "openSearchUrl", "http://dummy:9200");
+
+        String invalidMethod = "INVALID";
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            openSearchClient.sendRequest("/schemas", invalidMethod, null);
+        });
+
+        // Verify that the exception message contains the invalid method
+        assertEquals("Invalid HTTP method: " + invalidMethod, exception.getMessage());
     }
 }
 

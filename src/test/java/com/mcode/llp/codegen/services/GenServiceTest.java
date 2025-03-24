@@ -15,8 +15,8 @@ import org.springframework.http.ResponseEntity;
 import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -32,6 +32,12 @@ class GenServiceTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private JsonSchemaValidationService jsonSchemaValidationService;
+
+    @Mock
+    private HttpResponse<String> mockHttpResponse;
 
     @InjectMocks
     private GenService genService;
@@ -84,5 +90,98 @@ class GenServiceTest {
 
         ResponseEntity<Object> response = genService.deleteData(username, password, entityName, documentId);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    }
+
+    @Test
+    void testIndexExists_WhenIndexExists_ShouldReturnTrue() throws IOException, InterruptedException {
+        when(openSearchClient.sendRequest("/test_index", "HEAD", null)).thenReturn(mockHttpResponse);
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+
+        assertTrue(genService.indexExists("test_index"));
+    }
+
+    @Test
+    void testIndexExists_WhenIndexDoesNotExist_ShouldReturnFalse() throws IOException, InterruptedException {
+        when(openSearchClient.sendRequest("/test_index", "HEAD", null)).thenReturn(mockHttpResponse);
+        when(mockHttpResponse.statusCode()).thenReturn(404);
+
+        assertFalse(genService.indexExists("test_index"));
+    }
+
+    @Test
+    void testInsertData_WhenInvalidUser_ShouldReturnUnauthorized() throws Exception {
+        ResponseEntity<Object> mockUserResponse = ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        when(userService.isValidUser("user", "pass", "schema", "POST")).thenReturn(mockUserResponse);
+
+        ResponseEntity<Object> response = genService.insertData("user", "pass", "schema", objectMapper.createObjectNode());
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    void testDeleteData_WhenValidUser_ShouldDeleteSuccessfully() throws Exception {
+        ResponseEntity<Object> mockUserResponse = ResponseEntity.ok().build();
+        when(userService.isValidUser("user", "pass", "entity", "DELETE")).thenReturn(mockUserResponse);
+
+        ResponseEntity<Object> response = genService.deleteData("user", "pass", "entity", "docId");
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(openSearchClient).sendRequest("/entity/_doc/docId", "DELETE", null);
+    }
+
+    @Test
+    void testDeleteData_WhenInvalidUser_ShouldReturnUnauthorized() throws Exception {
+        ResponseEntity<Object> mockUserResponse = ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        when(userService.isValidUser("user", "pass", "entity", "DELETE")).thenReturn(mockUserResponse);
+
+        ResponseEntity<Object> response = genService.deleteData("user", "pass", "entity", "docId");
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    void testGetSingleData_WhenValidUser_ShouldReturnData() throws Exception {
+        ResponseEntity<Object> mockUserResponse = ResponseEntity.ok().build();
+        when(userService.isValidUser("user", "pass", "entity", "GET")).thenReturn(mockUserResponse);
+
+        String jsonResponse = "{\"_source\": {\"key\": \"value\"}}";
+        when(openSearchClient.sendRequest("/entity/_doc/docId", "GET", null)).thenReturn(mockHttpResponse);
+        when(mockHttpResponse.body()).thenReturn(jsonResponse);
+
+        ResponseEntity<Object> response = genService.getSingleData("user", "pass", "entity", "docId");
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    void testGetAllData_WhenValidUser_ShouldReturnDataList() throws Exception {
+        ResponseEntity<Object> mockUserResponse = ResponseEntity.ok(Map.of("tenant", "testTenant"));
+        when(userService.isValidUser("user", "pass", "entity", "GET")).thenReturn(mockUserResponse);
+
+        String jsonResponse = "{ \"hits\": { \"hits\": [{ \"_id\": \"1\", \"_source\": {\"key\": \"value\"} }] } }";
+        when(openSearchClient.sendRequest("/entity/_search?q=tenant:testTenant", "GET", null)).thenReturn(mockHttpResponse);
+        when(mockHttpResponse.body()).thenReturn(jsonResponse);
+
+        ResponseEntity<Object> response = genService.getAllData("user", "pass", "entity");
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    void testUpdateData_WhenValidUser_ShouldUpdateSuccessfully() throws Exception {
+        ResponseEntity<Object> mockUserResponse = ResponseEntity.ok().build();
+        when(userService.isValidUser("user", "pass", "entity", "PUT")).thenReturn(mockUserResponse);
+
+        String mockUpdateResponse = "{\"result\": \"updated\"}";
+        when(openSearchClient.sendRequest(anyString(), eq("POST"), anyString())).thenReturn(mockHttpResponse);
+        when(mockHttpResponse.body()).thenReturn(mockUpdateResponse);
+
+        Map<String, Object> updateData = new HashMap<>();
+        updateData.put("field", "newValue");
+
+        ResponseEntity<Object> response = genService.updateData("user", "pass", "entity", "1", updateData);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 }
