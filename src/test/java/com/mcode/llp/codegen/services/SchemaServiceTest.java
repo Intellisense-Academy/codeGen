@@ -1,7 +1,6 @@
 package com.mcode.llp.codegen.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mcode.llp.codegen.models.Schema;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
 import org.junit.jupiter.api.BeforeEach;
