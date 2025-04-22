@@ -7,8 +7,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.convertors.QueryGenerator;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
-import com.mcode.llp.codegen.models.Condition;
-import com.mcode.llp.codegen.models.ConditionGroup;
 import com.mcode.llp.codegen.models.SearchRequestPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
