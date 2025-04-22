@@ -3,6 +3,7 @@ package com.mcode.llp.codegen.convertors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.mcode.llp.codegen.models.Condition;
 import com.mcode.llp.codegen.models.ConditionGroup;
 import org.springframework.stereotype.Component;
@@ -22,10 +23,11 @@ public class QueryGenerator {
         // Add tenant filter at the top level
         ArrayNode filterArray = boolNode.putArray("filter");
 
-        // Add the tenant filter (using .keyword to ensure exact match if needed)
         ObjectNode tenantFilter = mapper.createObjectNode();
-        tenantFilter.putObject("term").put("tenant.keyword", tenantId);
+        ObjectNode tenantTerm = tenantFilter.putObject("term");
+        tenantTerm.set("tenant.keyword", TextNode.valueOf(tenantId));
         filterArray.add(tenantFilter);
+
         ArrayNode shouldArray = boolNode.putArray("should");
 
         if (!groups.isEmpty()) {
@@ -45,16 +47,16 @@ public class QueryGenerator {
                 switch (condition.getOperator().toLowerCase()) {
                     case "eq":
                         ObjectNode termNode = clause.putObject("term");
-                        termNode.put(condition.getField(), condition.getValue().toString());
+                        termNode.set(condition.getField(), TextNode.valueOf(condition.getValue().toString()));
                         break;
                     case "match":
                         ObjectNode matchNode = clause.putObject("match");
-                        matchNode.put(condition.getField(), condition.getValue().toString());
+                        matchNode.set(condition.getField(), TextNode.valueOf(condition.getValue().toString()));
                         break;
                     case "gt","lt","gte","lte":
                         ObjectNode rangeNode = clause.putObject("range");
                         ObjectNode fieldNode = rangeNode.putObject(condition.getField());
-                        fieldNode.put(condition.getOperator(), condition.getValue().toString());
+                        fieldNode.set(condition.getOperator(), TextNode.valueOf(condition.getValue().toString()));
                         break;
                     default:
                         throw new IllegalArgumentException("Invalid condition: " + condition.getOperator());
