@@ -5,15 +5,17 @@ import com.mcode.llp.codegen.models.ConditionGroup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
+@ExtendWith(MockitoExtension.class)
 class QueryGeneratorTest {
 
     private QueryGenerator queryGenerator;
@@ -110,5 +112,5 @@ class QueryGeneratorTest {
         assertNotNull(query);
         assertTrue(query.contains("\"filter\":[{\"term\":{\"tenant.keyword\":\"tenant1\"}}]"));
     }
-    
+
 }
