@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.models.Condition;
 import com.mcode.llp.codegen.models.ConditionGroup;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Component
 public class QueryGenerator {
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -42,15 +44,17 @@ public class QueryGenerator {
                 ObjectNode clause = mapper.createObjectNode();
                 switch (condition.getOperator().toLowerCase()) {
                     case "eq":
-                        clause.putObject("term").put(condition.getField(), condition.getValue().toString());
+                        ObjectNode termNode = clause.putObject("term");
+                        termNode.put(condition.getField(), condition.getValue().toString());
                         break;
                     case "match":
-                        clause.putObject("match").put(condition.getField(), condition.getValue().toString());
+                        ObjectNode matchNode = clause.putObject("match");
+                        matchNode.put(condition.getField(), condition.getValue().toString());
                         break;
                     case "gt","lt","gte","lte":
-                        clause.putObject("range")
-                                .putObject(condition.getField())
-                                .put(condition.getOperator(), condition.getValue().toString());
+                        ObjectNode rangeNode = clause.putObject("range");
+                        ObjectNode fieldNode = rangeNode.putObject(condition.getField());
+                        fieldNode.put(condition.getOperator(), condition.getValue().toString());
                         break;
                     default:
                         throw new IllegalArgumentException("Invalid condition: " + condition.getOperator());
