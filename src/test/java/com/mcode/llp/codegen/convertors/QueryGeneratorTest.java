@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
 
@@ -62,9 +63,8 @@ class QueryGeneratorTest {
         String tenantId = "tenant1";
 
         if ("EXCEPTION".equals(expectedQuery)) {
-            Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-                queryGenerator.buildComplexQuery(List.of(group), tenantId);
-            });
+            Executable executable = () -> queryGenerator.buildComplexQuery(List.of(group), tenantId);
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, executable);
             assertEquals("Invalid condition: " + operator, exception.getMessage());
         } else {
             String query = queryGenerator.buildComplexQuery(List.of(group), tenantId);
