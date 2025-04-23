@@ -112,6 +112,7 @@ class QueryGeneratorTest {
         assertTrue(query.contains("\"minimum_should_match\":1"));
     }
 
+
     @Test
     void testBuildComplexQueryWithEmptyGroups() {
         String tenantId = "tenant1";
