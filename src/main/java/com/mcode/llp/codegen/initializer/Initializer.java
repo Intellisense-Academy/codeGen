@@ -16,7 +16,7 @@ public class Initializer {
     private static final Logger logger = LoggerFactory.getLogger(Initializer.class);
     private static final String SCHEMA_UPDATE_ENDPOINT="/schemas/_doc/";
     private static final String USER_INDEX = "users";
-    private static final String PERMISSION_INDEX = "permission";
+    private static final String SETTINGS_INDEX = "settings";
 
     public Initializer(OpenSearchClient openSearchClient) {
         this.openSearchClient = openSearchClient;
@@ -44,7 +44,7 @@ public class Initializer {
         // Check if the index exists
         response = openSearchClient.sendRequest("/" + USER_INDEX, "GET", null);
         if (response.statusCode() == 404) {
-            String requestData= "{\"username\":\"superadmin\",\"password\":\"SuperSecurePassword\",\"role\":\"superuser\",\"tenant\":\"global\"}";
+            String requestData= "{\"username\":\"superadmin\",\"password\":\"SuperSecurePassword\",\"role\":\"superuser\",\"tenant\":\"global\",\"id\":\"1\"}";
             String endpoint = "/" + USER_INDEX + "/_doc/" + 1;
             response=openSearchClient.sendRequest(endpoint, "POST", requestData);
             if (response.statusCode() == 201) {
@@ -61,38 +61,38 @@ public class Initializer {
 
     private void permissionSchemaInitialize() throws IOException,InterruptedException{
         // Check if the permission schema exists
-        response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+PERMISSION_INDEX,"GET", null);
+        response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+ SETTINGS_INDEX,"GET", null);
         if(response.statusCode() == 404){
-            String requestData = "{\"title\":\"permission\",\"properties\":{\"entity\":{\"type\":\"string\"},\"roles\":{\"type\":\"array\"},\"operation\":{\"type\":\"array\"}},\"required\":[\"entity\",\"roles\",\"operation\"]}";
-            response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+PERMISSION_INDEX, "POST", requestData);
+            String requestData = "{\"title\":\"settings\",\"type\":\"object\",\"properties\":{\"entity\":{\"type\":\"string\"},\"roles\":{\"type\":\"object\",\"properties\":{\"allowedRoles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"allowedRoles\",\"operations\"]},\"notifications\":{\"type\":\"object\",\"properties\":{\"enabled\":{\"type\":\"boolean\"},\"content\":{\"type\":\"string\"},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"to\":{\"type\":\"string\"}},\"required\":[\"enabled\",\"content\",\"operations\",\"to\"]}},\"required\":[\"entity\",\"roles\",\"notifications\"]}";
+            response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+ SETTINGS_INDEX, "POST", requestData);
             if (response.statusCode() == 201) {
-                logger.info("✅ Permission Schema created successfully.");
+                logger.info("✅ settings Schema created successfully.");
             } else {
                 if (logger.isErrorEnabled()) {
                     logger.error(ERROR, response.body());
                 }
             }
         } else {
-            logger.info("✅ Permission Schema already exists. Skipping initialization.");
+            logger.info("✅ settings Schema already exists. Skipping initialization.");
         }
     }
 
     private void permissionIndexInitialize() throws IOException,InterruptedException{
-        // Check if the permission index exists
-        response = openSearchClient.sendRequest("/" + PERMISSION_INDEX, "GET", null);
+        // Check if the setting index exists
+        response = openSearchClient.sendRequest("/" + SETTINGS_INDEX, "GET", null);
         if (response.statusCode() == 404) {
-            String requestData = "{\"entity\":\"users\",\"roles\":[\"superuser\"],\"operation\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"]}";
-            String endpoint = "/" + PERMISSION_INDEX + "/_doc/" + 1;
+            String requestData = "{\"entity\":\"users\",\"roles\":{\"allowedRoles\":[\"superuser\"],\"operations\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"]},\"notifications\":{\"enabled\":false,\"content\":\"Hi superuser\",\"operations\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"],\"to\":\"+1234567890\"}}";
+            String endpoint = "/" + SETTINGS_INDEX + "/_doc/" + 1;
             response=openSearchClient.sendRequest(endpoint, "POST", requestData);
             if (response.statusCode() == 201) {
-                logger.info("✅ permission index created successfully.");
+                logger.info("✅ settings index created successfully.");
             } else {
                 if (logger.isErrorEnabled()) {
                     logger.error(ERROR, response.body());
                 }
             }
         } else {
-            logger.info("✅ permission index already exists. Skipping initialization.");
+            logger.info("✅ settings index already exists. Skipping initialization.");
         }
     }
 

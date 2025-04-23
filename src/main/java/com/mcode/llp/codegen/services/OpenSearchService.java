@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.convertors.QueryGenerator;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
+import com.mcode.llp.codegen.models.SearchQuery;
 import com.mcode.llp.codegen.models.SearchRequestPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +36,12 @@ public class OpenSearchService {
     public JsonNode executeSearch(SearchRequestPayload payload, String tenantId, List<String> fieldsToReturn) throws JsonProcessingException {
         // If there's no relation, run normal search
         if (payload.getRelation() == null || payload.getRelatedQuery() == null) {
-            String queryJson = generator.buildComplexQuery(payload.getConditionGroups(), tenantId);
-            return searchOpenSearch(payload.getIndexName(), queryJson, fieldsToReturn);
+            String queryJson = generator.buildComplexQuery(payload.getMainQuery().getConditionGroups(), tenantId);
+            return searchOpenSearch(payload.getMainQuery().getIndexName(), queryJson, fieldsToReturn);
         }
 
         // Step 1: Execute the second query to get values
-        SearchRequestPayload relatedPayload = payload.getRelatedQuery();
+        SearchQuery relatedPayload = payload.getRelatedQuery();
         String relatedQueryJson = generator.buildComplexQuery(relatedPayload.getConditionGroups(), tenantId);
         JsonNode relatedResult = searchOpenSearch(relatedPayload.getIndexName(), relatedQueryJson, relatedPayload.getFieldsToReturn());
 
@@ -54,7 +55,7 @@ public class OpenSearchService {
         }
 
         // Step 3: Add a "must_not terms" clause to the main query
-        String mainQueryJson = generator.buildComplexQuery(payload.getConditionGroups(), tenantId);
+        String mainQueryJson = generator.buildComplexQuery(payload.getMainQuery().getConditionGroups(), tenantId);
         ObjectNode mainQuery = (ObjectNode) mapper.readTree(mainQueryJson);
         ObjectNode boolNode = (ObjectNode) mainQuery.path("query").path("bool");
 
@@ -62,7 +63,8 @@ public class OpenSearchService {
         ObjectNode termsNode = mapper.createObjectNode();
         ArrayNode valuesArray = mapper.createArrayNode();
         excludeValues.forEach(valuesArray::add);
-        termsNode.putObject("terms").set("_id", valuesArray); // ensure keyword for exact match
+        String fieldToFilter = payload.getConnectedKey().endsWith(".keyword") ? payload.getConnectedKey() : payload.getConnectedKey() + ".keyword";
+        termsNode.putObject("terms").set(fieldToFilter, valuesArray); // ensure keyword for exact match
 
         if (payload.getRelation().equalsIgnoreCase("not in")) {
             termsArray = boolNode.withArray("must_not");
@@ -75,7 +77,7 @@ public class OpenSearchService {
         termsArray.add(termsNode);
 
         // Step 4: Execute modified main query
-        return searchOpenSearch(payload.getIndexName(), mainQuery.toString(), fieldsToReturn);
+        return searchOpenSearch(payload.getMainQuery().getIndexName(), mainQuery.toString(), fieldsToReturn);
     }
 
     private JsonNode searchOpenSearch(String indexName, String queryJson, List<String> fieldsToReturn) {
@@ -112,7 +114,6 @@ public class OpenSearchService {
 
         if (isWildcardAll(fieldsToReturn)) {
             addAllFieldsFromSource(obj, source);
-            obj.put("_id", hit.path("_id").asText()); // ensure _id is added
         } else {
             addSelectedFields(obj, source, fieldsToReturn);
         }

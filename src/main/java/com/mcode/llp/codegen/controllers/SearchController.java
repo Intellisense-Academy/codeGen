@@ -37,7 +37,7 @@ public class SearchController {
             String[] credentials = userService.extractCredentials(authHeader);
             String username = credentials[0];
             String password = credentials[1];
-            String entityName=payload.getIndexName();
+            String entityName=payload.getMainQuery().getIndexName();
             ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password,entityName,"GET");
             if (userValidResponse.getStatusCode() == HttpStatus.OK) {
 
@@ -47,7 +47,7 @@ public class SearchController {
                     Map<String, Object> bodyMap = (Map<String, Object>) responseBody;
                     if (bodyMap.containsKey("tenant")) {
                         String tenantName = bodyMap.get("tenant").toString();
-                        List<String> fieldsToReturn = payload.getFieldsToReturn();
+                        List<String> fieldsToReturn = payload.getMainQuery().getFieldsToReturn();
                         JsonNode response = opensearchService.executeSearch(payload,tenantName,fieldsToReturn);
                         return ResponseEntity.ok(response);
 

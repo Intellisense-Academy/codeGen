@@ -12,8 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.http.HttpResponse;
-import java.util.Base64;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -106,41 +105,49 @@ public class UserService {
         }
     }
 
-    public boolean isAuthorizedUser(String entityName, String role, String operation) throws IOException, InterruptedException {
-        String endpoint = "/permission/_search?q=entity:" + entityName + "+AND+roles:" + role;
+    private JsonNode getPermissionData(String entityName) throws IOException, InterruptedException{
+        String endpoint = "/settings/_search?q=entity:" + entityName;
 
-            response = client.sendRequest(endpoint, "GET", null);
-            // Parse JSON response
-            JsonNode jsonNode = objectMapper.readTree(response.body());
+        response = client.sendRequest(endpoint, "GET", null);
+        JsonNode jsonNode = objectMapper.readTree(response.body());
 
-            // Extract hits array
-            JsonNode hits = jsonNode.path("hits").path("hits");
-            if (hits.isEmpty()) {
-                return false;
-            }
+        JsonNode hits = jsonNode.path("hits").path("hits");
+        if (hits.isEmpty()) {
+            return null;
+        }
 
-            // Extract permission details
-            JsonNode permissionData = hits.get(0).path("_source");
-            if (permissionData.isMissingNode()) {
-                return false;
-            }
-
-            return rolesAndOperationCheck(role, operation, permissionData);
+        JsonNode sourceNode = hits.get(0).path("_source");
+        if (sourceNode.isMissingNode()) {
+            return null;
+        }
+        return sourceNode;
     }
 
-    private static boolean rolesAndOperationCheck(String role, String operation, JsonNode permissionData) {
-        JsonNode roles = permissionData.path("roles");
-        JsonNode operations = permissionData.path("operation");
-            for (JsonNode currentRole : roles) {
-                if (currentRole.asText().equals(role)) {
-                    for (JsonNode currentOperation : operations) {
-                        if (currentOperation.asText().equals(operation)) {
-                            return true;
-                        }
-                    }
-                }
+    private boolean containsValue(JsonNode arrayNode, String value) {
+        for (JsonNode node : arrayNode) {
+            if (node.asText().equals(value)) {
+                return true;
             }
+        }
         return false;
     }
 
+    public boolean isAuthorizedUser(String entityName, String role, String operation) throws IOException, InterruptedException {
+        JsonNode permissionData = getPermissionData(entityName);
+
+        if(permissionData==null){
+            return false;
+        }
+
+        // Extracting roles and operations from the updated schema
+        JsonNode rolesNode = permissionData.path("roles").path("allowedRoles");
+        JsonNode operationsNode = permissionData.path("roles").path("operations");
+
+        // Check if the role exists in allowedRoles
+        boolean roleExists = rolesNode.isArray() && containsValue(rolesNode, role);
+        // Check if the operation exists in operations
+        boolean operationExists = operationsNode.isArray() && containsValue(operationsNode, operation);
+
+        return roleExists && operationExists;
+    }
 }
