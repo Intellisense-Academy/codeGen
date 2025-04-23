@@ -5,15 +5,14 @@ import com.mcode.llp.codegen.models.ConditionGroup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class QueryGeneratorTest {
@@ -54,16 +53,24 @@ class QueryGeneratorTest {
             "'gt', 10, '\"range\":{\"field1\":{\"gt\":\"10\"}}'",
             "'lt', 10, '\"range\":{\"field1\":{\"lt\":\"10\"}}'",
             "'gte', 10, '\"range\":{\"field1\":{\"gte\":\"10\"}}'",
-            "'lte', 10, '\"range\":{\"field1\":{\"lte\":\"10\"}}'"
+            "'lte', 10, '\"range\":{\"field1\":{\"lte\":\"10\"}}'",
+            "'invalidOp', 10, 'EXCEPTION'"
     })
     void testBuildComplexQueryWithRangeOperators(String operator, int value, String expectedQuery) {
         Condition condition = new Condition("field1", operator, value);
         ConditionGroup group = new ConditionGroup("or", List.of(condition));
         String tenantId = "tenant1";
 
-        String query = queryGenerator.buildComplexQuery(List.of(group), tenantId);
-        assertNotNull(query);
-        assertTrue(query.contains(expectedQuery));
+        if ("EXCEPTION".equals(expectedQuery)) {
+            Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+                queryGenerator.buildComplexQuery(List.of(group), tenantId);
+            });
+            assertEquals("Invalid condition: " + operator, exception.getMessage());
+        } else {
+            String query = queryGenerator.buildComplexQuery(List.of(group), tenantId);
+            assertNotNull(query);
+            assertTrue(query.contains(expectedQuery));
+        }
     }
 
     @Test
