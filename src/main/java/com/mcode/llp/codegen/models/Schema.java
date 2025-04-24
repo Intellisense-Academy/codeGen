@@ -10,6 +10,7 @@ import lombok.Data;
 public class Schema {
     String title;
     String type;
+    String format;
     Map<String, Schema> properties = new HashMap<>();
     Set<String> required = new HashSet<>();
     Integer minimum;

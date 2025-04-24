@@ -63,19 +63,19 @@ class UserServiceTest {
         String entityName = "testEntity";
         String operation = "read";
 
-        String jsonResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"username\": \"testUser\", \"password\": \"testPass\", \"role\": \"admin\", \"tenant\": \"global\" } } ] } }";
+        String userSearchResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"username\": \"testUser\", \"password\": \"testPass\", \"role\": \"admin\", \"tenant\": \"global\" } } ] } }";
+        when(openSearchClient.sendRequest(eq("/users/_search?q=username:" + username), eq("GET"), isNull()))
+                .thenReturn(httpResponse);
+        when(httpResponse.body()).thenReturn(userSearchResponse);
 
-        when(openSearchClient.sendRequest(eq("/users/_search?q=username:" + username), eq("GET"), isNull())).thenReturn(httpResponse);
-        when(httpResponse.body()).thenReturn(jsonResponse);
-
-        String jsonResponse1 = "{ \"hits\": { \"hits\": [ { \"_source\": { \"roles\": [\"admin\"], \"operation\": [\"read\", \"write\"] } } ] } }";
-
-        when(openSearchClient.sendRequest(eq("/permission/_search?q=entity:" + entityName + "+AND+roles:admin"), eq("GET"), isNull())).thenReturn(httpResponse1);
-        when(httpResponse1.body()).thenReturn(jsonResponse1);
+        String permissionSearchResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"roles\": { \"allowedRoles\": [\"admin\"], \"operations\": [\"read\", \"write\"] } } } ] } }";
+        when(openSearchClient.sendRequest(eq("/settings/_search?q=entity:" + entityName), eq("GET"), isNull()))
+                .thenReturn(httpResponse1);
+        when(httpResponse1.body()).thenReturn(permissionSearchResponse);
 
         ResponseEntity<Object> response = userService.isValidUser(username, password, entityName, operation);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
 
+        assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody() instanceof Map);
         assertEquals("global", ((Map<String, Object>) response.getBody()).get("tenant"));
     }
@@ -113,15 +113,17 @@ class UserServiceTest {
 
     @Test
     void testIsAuthorizedUser_Authorized() throws IOException, InterruptedException {
-        String jsonResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"roles\": [\"admin\"], \"operation\": [\"read\", \"write\"] } } ] } }";
+        // Correct JSON structure based on service logic
+        String jsonResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"roles\": { \"allowedRoles\": [\"admin\"], \"operations\": [\"read\", \"write\"] } } } ] } }";
 
         when(openSearchClient.sendRequest(anyString(), eq("GET"), isNull())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(jsonResponse);
 
         boolean result = userService.isAuthorizedUser("testEntity", "admin", "read");
 
-        assertTrue(result);
+        assertTrue(result); // ✅ This should now pass
     }
+
 
     @Test
     void testIsAuthorizedUser_NotAuthorized() throws IOException, InterruptedException {

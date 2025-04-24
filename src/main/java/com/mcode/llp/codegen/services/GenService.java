@@ -50,14 +50,10 @@ public class GenService {
         }
     }
     
-    public Map<String, Object> addTencent(Object responseBody, JsonNode data){
+    public void addTenant(Object responseBody, JsonNode data){
         Map<String, Object> responseData = objectMapper.convertValue(responseBody, new TypeReference<HashMap<String, Object>>() {});
         String tenant = (String) responseData.get(TENENT);
-        Map<String, Object> requestData = objectMapper.convertValue(data,new TypeReference<HashMap<String, Object>>() {});
-        if (tenant != null) {
-            requestData.put(TENENT, tenant);
-        }
-        return requestData;
+        ((ObjectNode) data).put(TENENT, tenant);
     }
 
     public ResponseEntity<Object> insertData(String username, String password, String schemaName, JsonNode data) throws IOException,InterruptedException {
@@ -68,13 +64,13 @@ public class GenService {
                 for (ValidationMessage msg : service.validateJson(data, schemaName)) {
                     messages.add(msg.getMessage()); // Extracting only the message
                 }if(messages.isEmpty()){
-                    String requestBody;
-                    if(data.has(TENENT)){
-                        requestBody=objectMapper.writeValueAsString(data);
-                    }else{
-                        requestBody=objectMapper.writeValueAsString(addTencent(userValidResponse.getBody(),data));
-                    }
                     String documentId = UUID.randomUUID().toString();
+                    ((ObjectNode) data).put("id", documentId);
+
+                    if(!data.has(TENENT)) {
+                        addTenant(userValidResponse.getBody(),data);
+                    }
+                    String requestBody=objectMapper.writeValueAsString(data);
                     String endpoint = "/" + schemaName + DOC + documentId;
                     response= openSearchClient.sendRequest(endpoint, "POST", requestBody);
                     return ResponseEntity.status(HttpStatus.CREATED).body(response.body());
@@ -121,7 +117,6 @@ public class GenService {
 
                 if (responseJson.has(SOURCE)) {
                     ObjectNode sourceObject = (ObjectNode) responseJson.get(SOURCE); // Convert to ObjectNode
-                    sourceObject.put("id", documentId);
                     return ResponseEntity.ok(sourceObject);
                 } else {
                     return null;
@@ -152,8 +147,6 @@ public class GenService {
             List<JsonNode> data = new ArrayList<>();
             for (JsonNode hit : hitsArray) {
                 ObjectNode sourceObject = (ObjectNode) hit.get(SOURCE);
-                String id = hit.get("_id").asText();
-                sourceObject.put("id",id);
                 data.add(sourceObject);
             }
             return ResponseEntity.ok(data);
