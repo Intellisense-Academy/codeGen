@@ -18,6 +18,7 @@ import java.util.*;
 public class SchemaService {
 
     private static final String ACTION_1 = "_source";
+    private static final String DELETE = "DELETE";
     private final OpenSearchClient openSearchClient;
 
     @Autowired
@@ -77,7 +78,7 @@ public class SchemaService {
 
     public HttpResponse<String> deleteSchema(String id) throws IOException,InterruptedException {
         String endpoint = "/schemas/_doc/"+id;
-        return openSearchClient.sendRequest(endpoint, "DELETE", null);
+        return openSearchClient.sendRequest(endpoint, DELETE, null);
     }
 
     public void createDefaultSettingForSchema(String schemaTitle) throws IOException, InterruptedException {
@@ -89,7 +90,7 @@ public class SchemaService {
         // Admin role
         Role adminRole = new Role();
         adminRole.setAllowedRoles(List.of("admin"));
-        adminRole.setOperations(List.of("POST", "PUT", "DELETE", "GET"));
+        adminRole.setOperations(List.of("POST", "PUT", DELETE, "GET"));
         roleList.add(adminRole);
 
         // Viewer role
@@ -104,7 +105,7 @@ public class SchemaService {
         Notification notification = new Notification();
         notification.setEnabled(false);
         notification.setContent("Default notification content for " + schemaTitle);
-        notification.setOperations(Arrays.asList("POST", "PUT", "DELETE", "GET"));
+        notification.setOperations(Arrays.asList("POST", "PUT", DELETE, "GET"));
         notification.setTo("+0000000000");
         setting.setNotifications(notification);
 
