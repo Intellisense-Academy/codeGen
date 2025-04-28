@@ -1,7 +1,10 @@
 package com.mcode.llp.codegen.services;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mcode.llp.codegen.models.Notification;
+import com.mcode.llp.codegen.models.Role;
 import com.mcode.llp.codegen.models.Schema;
+import com.mcode.llp.codegen.models.Setting;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -76,4 +79,39 @@ public class SchemaService {
         String endpoint = "/schemas/_doc/"+id;
         return openSearchClient.sendRequest(endpoint, "DELETE", null);
     }
+
+    public void createDefaultSettingForSchema(String schemaTitle) throws IOException, InterruptedException {
+        Setting setting = new Setting();
+        setting.setEntity(schemaTitle);
+
+        List<Role> roleList = new ArrayList<>();
+
+        // Admin role
+        Role adminRole = new Role();
+        adminRole.setAllowedRoles(List.of("admin"));
+        adminRole.setOperations(List.of("POST", "PUT", "DELETE", "GET"));
+        roleList.add(adminRole);
+
+        // Viewer role
+        Role viewerRole = new Role();
+        viewerRole.setAllowedRoles(List.of("viewer"));
+        viewerRole.setOperations(List.of("GET"));
+        roleList.add(viewerRole);
+
+        setting.setRoles(roleList);
+
+        // Notification
+        Notification notification = new Notification();
+        notification.setEnabled(false);
+        notification.setContent("Default notification content for " + schemaTitle);
+        notification.setOperations(Arrays.asList("POST", "PUT", "DELETE", "GET"));
+        notification.setTo("+0000000000");
+        setting.setNotifications(notification);
+
+        // Convert to JSON and send
+        String jsonData = objectMapper.writeValueAsString(setting);
+        String endpoint = "/settings/_doc/" + schemaTitle;
+        openSearchClient.sendRequest(endpoint, "POST", jsonData);
+    }
+    
 }

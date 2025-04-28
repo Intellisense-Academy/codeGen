@@ -31,6 +31,9 @@ import java.net.http.HttpResponse;
         public ResponseEntity<String> createSchema(@RequestBody Schema schema) {
             try {
                 response = openSearchService.insertSchema("schemas", schema.getTitle(), schema);
+                if (response.statusCode() == 201) {
+                    openSearchService.createDefaultSettingForSchema(schema.getTitle());
+                }
                 return ResponseEntity.status(HttpStatus.CREATED).body(response.body());
             } catch (IOException | InterruptedException e) {
                 logger.error(ACTION_2, e.getMessage());

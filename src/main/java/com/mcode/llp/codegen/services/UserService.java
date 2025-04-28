@@ -139,15 +139,26 @@ public class UserService {
             return false;
         }
 
-        // Extracting roles and operations from the updated schema
-        JsonNode rolesNode = permissionData.path("roles").path("allowedRoles");
-        JsonNode operationsNode = permissionData.path("roles").path("operations");
+        // roles is now an array
+        JsonNode rolesArrayNode = permissionData.path("roles");
 
-        // Check if the role exists in allowedRoles
-        boolean roleExists = rolesNode.isArray() && containsValue(rolesNode, role);
-        // Check if the operation exists in operations
-        boolean operationExists = operationsNode.isArray() && containsValue(operationsNode, operation);
+        if (!rolesArrayNode.isArray()) {
+            return false;
+        }
 
-        return roleExists && operationExists;
+        for (JsonNode roleObj : rolesArrayNode) {
+            JsonNode allowedRolesNode = roleObj.path("allowedRoles");
+            JsonNode operationsNode = roleObj.path("operations");
+
+            boolean roleExists = allowedRolesNode.isArray() && containsValue(allowedRolesNode, role);
+            boolean operationExists = operationsNode.isArray() && containsValue(operationsNode, operation);
+
+            if (roleExists && operationExists) {
+                return true; // If any object matches, user is authorized
+            }
+        }
+
+        return false;
     }
+
 }
