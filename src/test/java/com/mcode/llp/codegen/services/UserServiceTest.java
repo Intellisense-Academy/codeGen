@@ -60,25 +60,30 @@ class UserServiceTest {
     void testIsValidUser_Success() throws IOException, InterruptedException {
         String username = "testUser";
         String password = "testPass";
-        String entityName = "testEntity";
-        String operation = "read";
+        String entityName = "users"; // Important: match the entity from your requestData
+        String operation = "GET";    // Use operation that exists
 
-        String userSearchResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"username\": \"testUser\", \"password\": \"testPass\", \"role\": \"admin\", \"tenant\": \"global\" } } ] } }";
+        // Mock user search response
+        String userSearchResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"username\": \"testUser\", \"password\": \"testPass\", \"role\": \"superuser\", \"tenant\": \"global\" } } ] } }";
         when(openSearchClient.sendRequest(eq("/users/_search?q=username:" + username), eq("GET"), isNull()))
                 .thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(userSearchResponse);
 
-        String permissionSearchResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"roles\": { \"allowedRoles\": [\"admin\"], \"operations\": [\"read\", \"write\"] } } } ] } }";
+        // Mock permission (settings) search response
+        String permissionSearchResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"entity\": \"users\", \"roles\": [ { \"allowedRoles\": [\"superuser\"], \"operations\": [\"POST\", \"PUT\", \"DELETE\", \"GET\"] } ], \"notifications\": { \"enabled\": false, \"content\": \"Hi superuser\", \"operations\": [\"POST\", \"PUT\", \"DELETE\", \"GET\"], \"to\": \"+1234567890\" } } } ] } }";
         when(openSearchClient.sendRequest(eq("/settings/_search?q=entity:" + entityName), eq("GET"), isNull()))
                 .thenReturn(httpResponse1);
         when(httpResponse1.body()).thenReturn(permissionSearchResponse);
 
+        // Call your service
         ResponseEntity<Object> response = userService.isValidUser(username, password, entityName, operation);
 
+        // Validate
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody() instanceof Map);
         assertEquals("global", ((Map<String, Object>) response.getBody()).get("tenant"));
     }
+
 
 
 
@@ -113,15 +118,15 @@ class UserServiceTest {
 
     @Test
     void testIsAuthorizedUser_Authorized() throws IOException, InterruptedException {
-        // Correct JSON structure based on service logic
-        String jsonResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"roles\": { \"allowedRoles\": [\"admin\"], \"operations\": [\"read\", \"write\"] } } } ] } }";
+        // Corrected JSON: roles is an array
+        String jsonResponse = "{ \"hits\": { \"hits\": [ { \"_source\": { \"roles\": [ { \"allowedRoles\": [\"admin\"], \"operations\": [\"read\", \"write\"] } ] } } ] } }";
 
         when(openSearchClient.sendRequest(anyString(), eq("GET"), isNull())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(jsonResponse);
 
         boolean result = userService.isAuthorizedUser("testEntity", "admin", "read");
 
-        assertTrue(result); // ✅ This should now pass
+        assertTrue(result); // ✅ Now it will pass correctly
     }
 
 

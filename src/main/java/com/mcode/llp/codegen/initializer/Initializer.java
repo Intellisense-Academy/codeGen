@@ -63,7 +63,7 @@ public class Initializer {
         // Check if the permission schema exists
         response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+ SETTINGS_INDEX,"GET", null);
         if(response.statusCode() == 404){
-            String requestData = "{\"title\":\"settings\",\"type\":\"object\",\"properties\":{\"entity\":{\"type\":\"string\"},\"roles\":{\"type\":\"object\",\"properties\":{\"allowedRoles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"allowedRoles\",\"operations\"]},\"notifications\":{\"type\":\"object\",\"properties\":{\"enabled\":{\"type\":\"boolean\"},\"content\":{\"type\":\"string\"},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"to\":{\"type\":\"string\"}},\"required\":[\"enabled\",\"content\",\"operations\",\"to\"]}},\"required\":[\"entity\",\"roles\",\"notifications\"]}";
+            String requestData = "{\"title\":\"settings\",\"type\":\"object\",\"properties\":{\"entity\":{\"type\":\"string\"},\"roles\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"allowedRoles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"allowedRoles\",\"operations\"]}},\"notifications\":{\"type\":\"object\",\"properties\":{\"enabled\":{\"type\":\"boolean\"},\"content\":{\"type\":\"string\"},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"to\":{\"type\":\"string\"}},\"required\":[\"enabled\",\"content\",\"operations\",\"to\"]}},\"required\":[\"entity\",\"roles\",\"notifications\"]}";
             response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+ SETTINGS_INDEX, "POST", requestData);
             if (response.statusCode() == 201) {
                 logger.info("✅ settings Schema created successfully.");
@@ -81,7 +81,7 @@ public class Initializer {
         // Check if the setting index exists
         response = openSearchClient.sendRequest("/" + SETTINGS_INDEX, "GET", null);
         if (response.statusCode() == 404) {
-            String requestData = "{\"entity\":\"users\",\"roles\":{\"allowedRoles\":[\"superuser\"],\"operations\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"]},\"notifications\":{\"enabled\":false,\"content\":\"Hi superuser\",\"operations\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"],\"to\":\"+1234567890\"}}";
+            String requestData = "{\"entity\":\"users\",\"roles\":[{\"allowedRoles\":[\"superuser\"],\"operations\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"]}],\"notifications\":{\"enabled\":false,\"content\":\"Hi superuser\",\"operations\":[\"POST\",\"PUT\",\"DELETE\",\"GET\"],\"to\":\"+1234567890\"}}";
             String endpoint = "/" + SETTINGS_INDEX + "/_doc/" + 1;
             response=openSearchClient.sendRequest(endpoint, "POST", requestData);
             if (response.statusCode() == 201) {
