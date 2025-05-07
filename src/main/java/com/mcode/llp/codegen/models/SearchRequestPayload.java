@@ -14,6 +14,4 @@ public class SearchRequestPayload {
     private String connectedKey;
     private SearchQuery relatedQuery;
     private List<AggregationSpec> aggregations;
-
-
 }

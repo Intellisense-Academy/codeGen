@@ -135,14 +135,17 @@ public class OpenSearchService {
         if (aggregations != null && !aggregations.isEmpty()) {
             ObjectNode aggsNode = mapper.createObjectNode();
             for (AggregationSpec agg : aggregations) {
+                ObjectNode fieldNode = mapper.createObjectNode();
+                fieldNode.set("field", mapper.getNodeFactory().textNode(agg.getField()));
+
                 ObjectNode aggTypeNode = mapper.createObjectNode();
-                aggTypeNode.set(agg.getType(), mapper.createObjectNode().put("field", agg.getField()));
+                aggTypeNode.set(agg.getType(), fieldNode);
+
                 aggsNode.set(agg.getName(), aggTypeNode);
             }
             mainQuery.set("aggs", aggsNode);
         }
     }
-
 
     private JsonNode searchOpenSearch(String indexName, String queryJson, List<String> fieldsToReturn, List<AggregationSpec> aggregations) {
         try {

@@ -142,7 +142,7 @@ class OpenSearchServiceTest {
     }
 
     @Test
-    public void testSendNotification_success() throws Exception {
+    void testSendNotification_success() throws Exception {
         // Arrange
         String tenantId = "testTenant";
         String name = "welcome";
@@ -217,7 +217,7 @@ class OpenSearchServiceTest {
     }
 
     @Test
-    public void testSendNotification_templateMissing() throws Exception {
+    void testSendNotification_templateMissing() throws Exception {
         SearchRequestPayload payload = new SearchRequestPayload();
         SearchQuery mainQuery = new SearchQuery();
         mainQuery.setIndexName("contributors");
