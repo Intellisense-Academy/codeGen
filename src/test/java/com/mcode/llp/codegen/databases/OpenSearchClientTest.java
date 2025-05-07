@@ -69,5 +69,34 @@ class OpenSearchClientTest {
 
         assertEquals("delete", response.body());
     }
+    @Test
+    void putSendRequest() throws IOException, InterruptedException {
+        ReflectionTestUtils.setField(openSearchClient, "openSearchUrl", "http://dummy:9200");
+        String mockResponseBody = "put";
+
+        when(httpResponse.body()).thenReturn(mockResponseBody);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(httpResponse);
+
+        String requestBody = "{\"title\":\"update-test\",\"properties\":{\"field\":{\"type\":\"text\"}}}";
+
+        HttpResponse<String> response = openSearchClient.sendRequest("/schemas", "PUT", requestBody);
+
+        assertEquals("put", response.body());
+    }
+    @Test
+    void headSendRequest() throws IOException, InterruptedException {
+        ReflectionTestUtils.setField(openSearchClient, "openSearchUrl", "http://dummy:9200");
+        String mockResponseBody = "";
+
+        when(httpResponse.body()).thenReturn(mockResponseBody);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(httpResponse);
+
+        HttpResponse<String> response = openSearchClient.sendRequest("/schemas", "HEAD", null);
+
+        assertEquals("", response.body());
+    }
+    
 }
 
