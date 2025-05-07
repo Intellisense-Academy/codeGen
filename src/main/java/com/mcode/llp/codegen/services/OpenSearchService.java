@@ -100,8 +100,12 @@ public class OpenSearchService {
         Set<String> excludeValues = new HashSet<>();
         String requestKey = relatedPayload.getFieldsToReturn().get(0);
         if (relatedResult != null) {
-            for (JsonNode obj : relatedResult) {
-                excludeValues.add(obj.get(requestKey).asText());
+            JsonNode actualHits = relatedResult.has("hits") ? relatedResult.get("hits") : relatedResult;
+            for (JsonNode obj : actualHits) {
+                JsonNode fieldNode = obj.get(requestKey);
+                if (fieldNode != null && !fieldNode.isNull()) {
+                    excludeValues.add(fieldNode.asText());
+                }
             }
         }
 
