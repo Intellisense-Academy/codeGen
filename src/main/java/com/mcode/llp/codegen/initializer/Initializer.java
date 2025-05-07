@@ -1,6 +1,7 @@
 package com.mcode.llp.codegen.initializer;
 
 import com.mcode.llp.codegen.databases.OpenSearchClient;
+import com.mcode.llp.codegen.services.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -12,14 +13,17 @@ public class Initializer {
 
     HttpResponse<String> response;
     private final OpenSearchClient openSearchClient;
+    private final SchemaService service;
     private static final String ERROR = "An error occurred: {}";
     private static final Logger logger = LoggerFactory.getLogger(Initializer.class);
     private static final String SCHEMA_UPDATE_ENDPOINT="/schemas/_doc/";
     private static final String USER_INDEX = "users";
     private static final String SETTINGS_INDEX = "settings";
+    private static final String NOTIFICATION_INDEX = "notification";
 
-    public Initializer(OpenSearchClient openSearchClient) {
+    public Initializer(OpenSearchClient openSearchClient, SchemaService service) {
         this.openSearchClient = openSearchClient;
+        this.service = service;
     }
 
     private void superUserSchemaInitialize() throws IOException,InterruptedException{
@@ -96,6 +100,41 @@ public class Initializer {
         }
     }
 
+    private void notificationSchemaInitialize() throws IOException,InterruptedException{
+        // Check if the schema exists
+        response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+NOTIFICATION_INDEX,"GET", null);
+        if(response.statusCode() == 404){
+            String requestData = "{\"title\":\"notification\",\"properties\":{\"name\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"},\"receiver\":{\"type\":\"string\"},\"required\":[\"name\",\"content\",\"receiver\"]}}";
+            response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+NOTIFICATION_INDEX, "POST", requestData);
+            if (response.statusCode() == 201) {
+                logger.info("✅ Notification Schema created successfully.");
+            } else {
+                if (logger.isErrorEnabled()) {
+                    logger.error(ERROR, response.body());
+                }
+            }
+        } else {
+            logger.info("✅ Notification Schema already exists. Skipping initialization.");
+        }
+    }
+
+    private void notificationPermissionInitialize() throws IOException,InterruptedException{
+        String endpoint = "/settings/_doc/notification";
+        response = openSearchClient.sendRequest(endpoint,"GET", null);
+        if(response.statusCode() == 404){
+            response = service.createDefaultSettingForSchema(NOTIFICATION_INDEX);
+            if (response.statusCode() == 201) {
+                logger.info("✅ notification settings index created successfully.");
+            } else {
+                if (logger.isErrorEnabled()) {
+                    logger.error(ERROR, response.body());
+                }
+            }
+        }else{
+            logger.info("✅ Notification settings already exists. Skipping initialization.");
+        }
+    }
+
     public void superUserInitialize() {
         try {
             superUserSchemaInitialize();
@@ -110,6 +149,16 @@ public class Initializer {
         try{
             permissionSchemaInitialize();
             permissionIndexInitialize();
+        }catch (IOException | InterruptedException e){
+            logger.error(ERROR, e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public void notificationInitialize(){
+        try{
+            notificationSchemaInitialize();
+            notificationPermissionInitialize();
         }catch (IOException | InterruptedException e){
             logger.error(ERROR, e.getMessage());
             Thread.currentThread().interrupt();

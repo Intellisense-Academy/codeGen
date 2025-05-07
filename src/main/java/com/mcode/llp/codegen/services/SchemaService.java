@@ -81,7 +81,7 @@ public class SchemaService {
         return openSearchClient.sendRequest(endpoint, DELETE, null);
     }
 
-    public void createDefaultSettingForSchema(String schemaTitle) throws IOException, InterruptedException {
+    public HttpResponse<String> createDefaultSettingForSchema(String schemaTitle) throws IOException, InterruptedException {
         Setting setting = new Setting();
         setting.setEntity(schemaTitle);
 
@@ -112,7 +112,7 @@ public class SchemaService {
         // Convert to JSON and send
         String jsonData = objectMapper.writeValueAsString(setting);
         String endpoint = "/settings/_doc/" + schemaTitle;
-        openSearchClient.sendRequest(endpoint, "POST", jsonData);
+        return openSearchClient.sendRequest(endpoint, "POST", jsonData);
     }
     
 }
