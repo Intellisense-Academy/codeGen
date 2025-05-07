@@ -239,9 +239,11 @@ class OpenSearchServiceTest {
                 .thenReturn(mockResponse);
         when(mockResponse.body()).thenReturn(fakeSearchResult).thenReturn(emptyTemplateJson);
 
-        List<?> result = openSearchService.sendNotification(payload, "testTenant", "welcome");
+        List<Map<String, String>> result = openSearchService.sendNotification(payload, "testTenant", "welcome");
 
-        assertTrue(result.isEmpty());
+        assertEquals(1, result.size());
+        Map<String, String> responseEntry = result.get(0);
+        assertEquals("No notification template found for name: welcome", responseEntry.get("status"));
     }
 
 }
