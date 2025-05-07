@@ -72,7 +72,9 @@ public class OpenSearchService {
                 }
             }
         } else {
-            logger.error("No notification template found for name:{} ",name);
+            Map<String, String> result = new HashMap<>();
+            result.put("status", "No notification template found for name: " + name);
+            results.add(result);
         }
 
         return results;
