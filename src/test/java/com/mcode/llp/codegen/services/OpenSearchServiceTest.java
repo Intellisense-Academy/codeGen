@@ -5,11 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.convertors.QueryGenerator;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
-import com.mcode.llp.codegen.models.Condition;
-import com.mcode.llp.codegen.models.ConditionGroup;
-import com.mcode.llp.codegen.models.SearchQuery;
-import com.mcode.llp.codegen.models.SearchRequestPayload;
+import com.mcode.llp.codegen.models.*;
 
+import com.mcode.llp.codegen.notification.WhatAppNotification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -34,6 +32,9 @@ class OpenSearchServiceTest {
 
     @InjectMocks
     private OpenSearchService openSearchService;
+
+    @Mock
+    private WhatAppNotification notification;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -87,7 +88,7 @@ class OpenSearchServiceTest {
         when(openSearchClient.sendRequest(anyString(), eq("POST"), eq(queryJson))).thenReturn(mockResponse);
         when(mockResponse.body()).thenReturn(body);
 
-        JsonNode result = openSearchService.executeSearch(payload, tenantId, List.of("*"));
+        JsonNode result = openSearchService.executeSearch(payload, tenantId);
 
         assertNotNull(result);
         assertEquals("aswin", result.get(0).get("name").asText());
@@ -102,7 +103,7 @@ class OpenSearchServiceTest {
         when(generator.buildComplexQuery(any(), any())).thenReturn(queryJson);
         when(openSearchClient.sendRequest(any(), any(), any())).thenThrow(new IOException("Simulated error"));
 
-        JsonNode result = openSearchService.executeSearch(payload, "tenant", List.of("name"));
+        JsonNode result = openSearchService.executeSearch(payload, "tenant");
         assertNull(result);
     }
 
@@ -115,7 +116,7 @@ class OpenSearchServiceTest {
         when(openSearchClient.sendRequest(any(), any(), any())).thenReturn(mockResponse);
         when(mockResponse.body()).thenReturn(mockHitJson("1", Map.of("name", "abc", "email", "abc@mail.com")));
 
-        JsonNode result = openSearchService.executeSearch(payload, "tenant", List.of("*"));
+        JsonNode result = openSearchService.executeSearch(payload, "tenant");
 
         assertNotNull(result);
         assertEquals("abc", result.get(0).get("name").asText());
@@ -131,11 +132,118 @@ class OpenSearchServiceTest {
         when(openSearchClient.sendRequest(any(), any(), any())).thenReturn(mockResponse);
         when(mockResponse.body()).thenReturn(mockHitJson("1", Map.of("name", "abc", "email", "abc@mail.com")));
 
-        JsonNode result = openSearchService.executeSearch(payload, "tenant", List.of("name", "_id"));
+        JsonNode result = openSearchService.executeSearch(payload, "tenant");
 
         assertNotNull(result);
         assertEquals("abc", result.get(0).get("name").asText());
-        assertEquals("1", result.get(0).get("_id").asText());
-        assertNull(result.get(0).get("email"));
+        assertEquals("abc@mail.com", result.get(0).get("email").asText());
+
+        assertFalse(result.get(0).has("_id"));
     }
+
+    @Test
+    void testSendNotification_success() throws Exception {
+        // Arrange
+        String tenantId = "testTenant";
+        String name = "welcome";
+        SearchRequestPayload payload = new SearchRequestPayload();
+        SearchQuery mainQuery = new SearchQuery();
+        mainQuery.setIndexName("contributors");
+        mainQuery.setFieldsToReturn(List.of("name", "phno", "tenant"));
+        mainQuery.setConditionGroups(List.of(new ConditionGroup())); // dummy
+        payload.setMainQuery(mainQuery);
+
+        // This is the format that your service expects from openSearchClient for contributors
+        String fakeContributorsJson = """
+    {
+      "hits": {
+        "hits": [
+          {
+            "_source": {
+              "name": "Mukesh Raj",
+              "phno": "918778097615",
+              "tenant": "temple"
+            }
+          },
+          {
+            "_source": {
+              "name": "Karthick",
+              "phno": "919383467779",
+              "tenant": "temple"
+            }
+          }
+        ]
+      }
+    }
+    """;
+
+        // This is the format that your service expects for the template
+        String templateJson = """
+    {
+      "hits": {
+        "hits": [
+          {
+            "_source": {
+              "content": "Hi ${name},\\nThis is a reminder that your monthly contribution is still unpaid. Kindly complete the payment at your earliest convenience.\\nIf you’ve already paid, please ignore this message.\\n\\nThank you,\\n${tenant} Team"
+            }
+          }
+        ]
+      }
+    }
+    """;
+
+        // Mocks
+        when(generator.buildComplexQuery(any(), eq(tenantId))).thenReturn("{ \"query\": { \"match_all\": {} } }");
+        when(openSearchClient.sendRequest(contains("contributors/_search"), eq("POST"), anyString()))
+                .thenReturn(mockResponse);
+        when(openSearchClient.sendRequest(contains("/notification/_search?q=name:" + name), eq("GET"), isNull()))
+                .thenReturn(mockResponse);
+
+        // Simulate different responses for different calls
+        when(mockResponse.body())
+                .thenReturn(fakeContributorsJson) // first call (contributors)
+                .thenReturn(templateJson);       // second call (template)
+
+        when(notification.sendWhatsAppMessage(anyString(), anyString())).thenReturn(true);
+
+        // Act
+        List<Map<String, String>> results = openSearchService.sendNotification(payload, tenantId, name);
+
+        // Assert
+        assertEquals(2, results.size());
+        assertEquals("Message sent successfully", results.get(0).get("status"));
+        assertEquals("Message sent successfully", results.get(1).get("status"));
+        verify(notification, times(2)).sendWhatsAppMessage(anyString(), contains("Hi"));
+    }
+
+    @Test
+    void testSendNotification_templateMissing() throws Exception {
+        SearchRequestPayload payload = new SearchRequestPayload();
+        SearchQuery mainQuery = new SearchQuery();
+        mainQuery.setIndexName("contributors");
+        mainQuery.setFieldsToReturn(List.of("name", "phno", "tenant"));
+        mainQuery.setConditionGroups(List.of(new ConditionGroup())); // dummy
+        payload.setMainQuery(mainQuery);
+
+        String fakeSearchResult = "[]";
+        String emptyTemplateJson = """
+        {
+          "hits": {
+            "hits": []
+          }
+        }
+        """;
+
+        when(generator.buildComplexQuery(any(), any())).thenReturn("{ \"query\": { \"match_all\": {} } }");
+        when(openSearchClient.sendRequest(anyString(), anyString(), any()))
+                .thenReturn(mockResponse);
+        when(mockResponse.body()).thenReturn(fakeSearchResult).thenReturn(emptyTemplateJson);
+
+        List<Map<String, String>> result = openSearchService.sendNotification(payload, "testTenant", "welcome");
+
+        assertEquals(1, result.size());
+        Map<String, String> responseEntry = result.get(0);
+        assertEquals("No notification template found for name: welcome", responseEntry.get("status"));
+    }
+
 }

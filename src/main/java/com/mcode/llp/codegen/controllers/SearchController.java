@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,6 +23,7 @@ public class SearchController {
     private static final Logger logger = LoggerFactory.getLogger(SearchController.class);
     private static final String ACTION = "An error {}";
     private static final String MESSAGE = "message";
+    private static final String TENANT = "tenant";
 
     @Autowired
     public SearchController(OpenSearchService opensearchService, UserService userService){
@@ -45,11 +45,43 @@ public class SearchController {
 
                 if (responseBody instanceof Map) {
                     Map<String, Object> bodyMap = (Map<String, Object>) responseBody;
-                    if (bodyMap.containsKey("tenant")) {
-                        String tenantName = bodyMap.get("tenant").toString();
-                        List<String> fieldsToReturn = payload.getMainQuery().getFieldsToReturn();
-                        JsonNode response = opensearchService.executeSearch(payload,tenantName,fieldsToReturn);
+                    if (bodyMap.containsKey(TENANT)) {
+                        String tenantName = bodyMap.get(TENANT).toString();
+                        JsonNode response = opensearchService.executeSearch(payload,tenantName);
                         return ResponseEntity.ok(response);
+
+                    }
+                }
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(MESSAGE, "unauthorized Tenant"));
+
+            }else{
+                return userValidResponse;
+            }
+
+        } catch (IOException | InterruptedException  e) {
+            logger.error(ACTION, e.getMessage());
+            Thread.currentThread().interrupt();
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/notification")
+    public ResponseEntity<Object> sendNotification(@RequestBody SearchRequestPayload payload,@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,@RequestParam String name){
+        try {
+            String[] credentials = userService.extractCredentials(authHeader);
+            String username = credentials[0];
+            String password = credentials[1];
+            String entityName=payload.getMainQuery().getIndexName();
+            ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password,entityName,"GET");
+            if (userValidResponse.getStatusCode() == HttpStatus.OK) {
+
+                Object responseBody = userValidResponse.getBody();
+
+                if (responseBody instanceof Map) {
+                    Map<String, Object> bodyMap = (Map<String, Object>) responseBody;
+                    if (bodyMap.containsKey(TENANT)) {
+                        String tenantName = bodyMap.get(TENANT).toString();
+                        return ResponseEntity.ok(opensearchService.sendNotification(payload,tenantName,name));
 
                     }
                 }
