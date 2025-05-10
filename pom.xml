@@ -63,6 +63,7 @@
 						<phase>test</phase>  <!-- run report right after test -->
 						<goals>
 							<goal>report</goal>
+							<goal>report-aggregate</goal> <!-- Add this for multi-module projects -->
 						</goals>
 					</execution>
 				</executions>

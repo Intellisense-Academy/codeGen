@@ -52,9 +52,6 @@ public class OpenSearchClient {
                 requestBuilder.PUT(HttpRequest.BodyPublishers.ofString(body));
                 break;
             case "GET":
-                if (body != null && !body.isEmpty()) {
-                    throw new IllegalArgumentException("GET request should not have a body!");
-                }
                 requestBuilder.GET();
                 break;
             case "DELETE":
