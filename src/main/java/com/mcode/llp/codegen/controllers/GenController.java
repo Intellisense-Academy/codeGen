@@ -26,9 +26,9 @@ public class GenController {
         this.genService=genService;
         this.userService = userService;
     }
-    
+
     @PostMapping("/login")
-    public ResponseEntity<Object> Login (@RequestBody Login login){
+    public ResponseEntity<Object> login (@RequestBody Login login){
         String username = login.getUsername();
         String password = login.getPassword();
         try{

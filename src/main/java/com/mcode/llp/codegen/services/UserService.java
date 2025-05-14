@@ -21,6 +21,8 @@ public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private static final String ERROR = "An error {}";
     private static final String MESSAGE = "message";
+    private static final String USERNAME = "username";
+    private static final String TENENT = "tenant";
     private final OpenSearchClient client;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -75,7 +77,7 @@ public class UserService {
             }
 
 
-            String storedUsername = userData.path("username").asText();
+            String storedUsername = userData.path(USERNAME).asText();
             String storedPassword = userData.path("password").asText();
 
             if (!storedUsername.equals(username) || !storedPassword.equals(password)) {
@@ -84,12 +86,12 @@ public class UserService {
             }
 
             String role = userData.path("role").asText();
-            String tenant = userData.path("tenant").asText();
+            String tenant = userData.path(TENENT).asText();
 
             return ResponseEntity.ok(Map.of(
-                    "username", storedUsername,
+                    USERNAME, storedUsername,
                     "role", role,
-                    "tenant", tenant
+                    TENENT, tenant
             ));
 
         } catch (IOException | InterruptedException e) {
@@ -115,10 +117,10 @@ public class UserService {
             }
 
             // Get user details
-            String storedUsername = userData.path("username").asText();
+            String storedUsername = userData.path(USERNAME).asText();
             String storedPassword = userData.path("password").asText();
             String storedRole = userData.path("role").asText();
-            String storedTenet = userData.path("tenant").asText();
+            String storedTenet = userData.path(TENENT).asText();
 
             // Validate username and password
             if (!storedUsername.equals(username) || !storedPassword.equals(password)) {
@@ -128,7 +130,7 @@ public class UserService {
 
             boolean responseData = isAuthorizedUser(entityName,storedRole,operation);
             if(responseData){
-                return ResponseEntity.ok(Map.of("tenant", storedTenet));
+                return ResponseEntity.ok(Map.of(TENENT, storedTenet));
             }else{
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of(MESSAGE, "Your are not permitted to access"));
@@ -196,5 +198,4 @@ public class UserService {
 
         return false;
     }
-    
 }
