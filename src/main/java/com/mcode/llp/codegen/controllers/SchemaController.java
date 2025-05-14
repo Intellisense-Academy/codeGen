@@ -32,7 +32,11 @@ import java.net.http.HttpResponse;
             try {
                 response = openSearchService.insertSchema("schemas", schema.getTitle(), schema);
                 if (response.statusCode() == 201) {
-                    openSearchService.createDefaultSettingForSchema(schema.getTitle());
+                    response=openSearchService.createDefaultSettingForSchema(schema.getTitle());
+                    if(response.statusCode() != 201 && logger.isErrorEnabled()) {
+                            logger.error(ACTION_2, response.body());
+                            return ResponseEntity.status(HttpStatus.ACCEPTED).body("Schema created successfully, but settings creation failed: " + response.body());
+                    }
                 }
                 return ResponseEntity.status(HttpStatus.CREATED).body(response.body());
             } catch (IOException | InterruptedException e) {

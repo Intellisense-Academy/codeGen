@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import lombok.Data;
 
+import java.util.List;
+
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @Data
 public class SearchRequestPayload {
@@ -11,6 +13,5 @@ public class SearchRequestPayload {
     private String relation;
     private String connectedKey;
     private SearchQuery relatedQuery;
-
-
+    private List<AggregationSpec> aggregations;
 }
