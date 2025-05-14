@@ -52,30 +52,66 @@ public class UserService {
         }
     }
 
+    private JsonNode getUserByUsername(String username) throws IOException, InterruptedException {
+        String endpoint = "/users/_search?q=username:" + username;
+        response = client.sendRequest(endpoint, "GET", null);
+        JsonNode jsonNode = objectMapper.readTree(response.body());
+        JsonNode hits = jsonNode.path("hits").path("hits");
+        return hits.isEmpty() ? null : hits.get(0).path("_source");
+    }
+
+    public ResponseEntity<Object> loginUser(String username, String password) throws IOException, InterruptedException {
+        if (username.isEmpty() || password.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(MESSAGE, "Username and password must be provided."));
+        }
+
+        try {
+            JsonNode userData = getUserByUsername(username);
+
+            if (userData == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of(MESSAGE, "No user found"));
+            }
+
+
+            String storedUsername = userData.path("username").asText();
+            String storedPassword = userData.path("password").asText();
+
+            if (!storedUsername.equals(username) || !storedPassword.equals(password)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(MESSAGE, "Invalid Username or Password."));
+            }
+
+            String role = userData.path("role").asText();
+            String tenant = userData.path("tenant").asText();
+
+            return ResponseEntity.ok(Map.of(
+                    "username", storedUsername,
+                    "role", role,
+                    "tenant", tenant
+            ));
+
+        } catch (IOException | InterruptedException e) {
+            logger.error(ERROR, e.getMessage());
+            Thread.currentThread().interrupt();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(MESSAGE, "Internal server error."));
+        }
+    }
+
     public ResponseEntity<Object> isValidUser(String username, String password, String entityName, String operation) throws IOException, InterruptedException {
         if (username.isEmpty() || password.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(MESSAGE, "Authentication required. Please provide a username and password."));
         }
-        String endpoint = "/users/_search?q=username:" + username;
+
         try {
-            response = client.sendRequest(endpoint, "GET", null);
+            JsonNode userData = getUserByUsername(username);
 
-            // Parse JSON response
-            JsonNode jsonNode = objectMapper.readTree(response.body());
-
-            // Extract hits array
-            JsonNode hits = jsonNode.path("hits").path("hits");
-            if (hits.isEmpty()) {
+            if (userData == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of(MESSAGE, "No user found"));
-            }
-
-            // Extract user details
-            JsonNode userData = hits.get(0).path("_source");
-            if (userData.isMissingNode()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of(MESSAGE, "User data not found"));
             }
 
             // Get user details
@@ -160,5 +196,5 @@ public class UserService {
 
         return false;
     }
-
+    
 }
