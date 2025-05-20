@@ -104,7 +104,7 @@ public class Initializer {
         // Check if the schema exists
         response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+NOTIFICATION_INDEX,"GET", null);
         if(response.statusCode() == 404){
-            String requestData = "{\"title\":\"notification\",\"properties\":{\"name\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"},\"receiver\":{\"type\":\"string\"},\"required\":[\"name\",\"content\",\"receiver\"]}}";
+            String requestData = "{\"title\":\"notification\",\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"},\"receiver\":{\"type\":\"string\"}},\"required\":[\"name\",\"content\",\"receiver\"]}";
             response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+NOTIFICATION_INDEX, "POST", requestData);
             if (response.statusCode() == 201) {
                 logger.info("✅ Notification Schema created successfully.");
