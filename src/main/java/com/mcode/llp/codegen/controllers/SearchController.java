@@ -1,6 +1,7 @@
 package com.mcode.llp.codegen.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.mcode.llp.codegen.models.DateRangeRequest;
 import com.mcode.llp.codegen.models.SearchRequestPayload;
 import com.mcode.llp.codegen.services.OpenSearchService;
 import com.mcode.llp.codegen.services.UserService;
@@ -48,6 +49,40 @@ public class SearchController {
                     if (bodyMap.containsKey(TENANT)) {
                         String tenantName = bodyMap.get(TENANT).toString();
                         JsonNode response = opensearchService.executeSearch(payload,tenantName);
+                        return ResponseEntity.ok(response);
+
+                    }
+                }
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(MESSAGE, "unauthorized Tenant"));
+
+            }else{
+                return userValidResponse;
+            }
+
+        } catch (IOException | InterruptedException  e) {
+            logger.error(ACTION, e.getMessage());
+            Thread.currentThread().interrupt();
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/contributor/data")
+    public ResponseEntity<Object> pay(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,@RequestBody DateRangeRequest request) {
+        try {
+            String[] credentials = userService.extractCredentials(authHeader);
+            String username = credentials[0];
+            String password = credentials[1];
+            String entityName="contributor";
+            ResponseEntity<Object> userValidResponse = userService.isValidUser(username, password,entityName,"GET");
+            if (userValidResponse.getStatusCode() == HttpStatus.OK) {
+
+                Object responseBody = userValidResponse.getBody();
+
+                if (responseBody instanceof Map) {
+                    Map<String, Object> bodyMap = (Map<String, Object>) responseBody;
+                    if (bodyMap.containsKey(TENANT)) {
+                        String tenantName = bodyMap.get(TENANT).toString();
+                        JsonNode response = opensearchService.paidAndUnpaid(tenantName,request.getStartDate(),request.getEndDate());
                         return ResponseEntity.ok(response);
 
                     }

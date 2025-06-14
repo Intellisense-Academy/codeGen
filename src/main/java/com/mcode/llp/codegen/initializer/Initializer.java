@@ -30,7 +30,7 @@ public class Initializer {
         // Check if the schema exists
         response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+USER_INDEX,"GET", null);
         if(response.statusCode() == 404){
-            String requestData = "{\"title\":\"users\",\"properties\":{\"username\":{\"type\":\"string\"},\"password\":{\"type\":\"string\"},\"role\":{\"type\":\"string\"},\"tenant\":{\"type\":\"string\"}},\"required\":[\"username\",\"password\",\"role\",\"tenant\"]}";
+            String requestData = "{\"title\":\"users\",\"description\":\"User details\",\"type\":\"object\",\"properties\":{\"email\":{\"type\":\"string\",\"format\":\"email\"},\"password\":{\"type\":\"string\",\"minLength\":6},\"role\":{\"type\":\"string\"},\"tenant\":{\"type\":\"string\"}},\"required\":[\"email\",\"password\",\"role\",\"tenant\"]}";
             response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+USER_INDEX, "POST", requestData);
             if (response.statusCode() == 201) {
                 logger.info("✅ User Schema created successfully.");
@@ -48,7 +48,7 @@ public class Initializer {
         // Check if the index exists
         response = openSearchClient.sendRequest("/" + USER_INDEX, "GET", null);
         if (response.statusCode() == 404) {
-            String requestData= "{\"username\":\"superadmin\",\"password\":\"SuperSecurePassword\",\"role\":\"superuser\",\"tenant\":\"global\",\"id\":\"1\"}";
+            String requestData= "{\"email\":\"academyintellisense@gmail.com\",\"password\":\"SuperSecurePassword\",\"role\":\"superuser\",\"tenant\":\"global\",\"id\":\"1\"}";
             String endpoint = "/" + USER_INDEX + "/_doc/" + 1;
             response=openSearchClient.sendRequest(endpoint, "POST", requestData);
             if (response.statusCode() == 201) {
@@ -67,7 +67,7 @@ public class Initializer {
         // Check if the permission schema exists
         response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+ SETTINGS_INDEX,"GET", null);
         if(response.statusCode() == 404){
-            String requestData = "{\"title\":\"settings\",\"type\":\"object\",\"properties\":{\"entity\":{\"type\":\"string\"},\"roles\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"allowedRoles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"allowedRoles\",\"operations\"]}},\"notifications\":{\"type\":\"object\",\"properties\":{\"enabled\":{\"type\":\"boolean\"},\"content\":{\"type\":\"string\"},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"to\":{\"type\":\"string\"}},\"required\":[\"enabled\",\"content\",\"operations\",\"to\"]}},\"required\":[\"entity\",\"roles\",\"notifications\"]}";
+            String requestData = "{\"title\":\"settings\",\"description\":\"System preferences\",\"type\":\"object\",\"properties\":{\"entity\":{\"type\":\"string\"},\"roles\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"allowedRoles\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"allowedRoles\",\"operations\"]}},\"notifications\":{\"type\":\"object\",\"properties\":{\"enabled\":{\"type\":\"boolean\"},\"content\":{\"type\":\"string\"},\"operations\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"to\":{\"type\":\"string\"}},\"required\":[\"enabled\",\"content\",\"operations\",\"to\"]}},\"required\":[\"entity\",\"roles\",\"notifications\"]}";
             response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+ SETTINGS_INDEX, "POST", requestData);
             if (response.statusCode() == 201) {
                 logger.info("✅ settings Schema created successfully.");
@@ -89,7 +89,7 @@ public class Initializer {
             String endpoint = "/" + SETTINGS_INDEX + "/_doc/" + 1;
             response=openSearchClient.sendRequest(endpoint, "POST", requestData);
             if (response.statusCode() == 201) {
-                logger.info("✅ settings index created successfully.");
+                logger.info("✅ settings index created successfully for users.");
             } else {
                 if (logger.isErrorEnabled()) {
                     logger.error(ERROR, response.body());
@@ -104,7 +104,7 @@ public class Initializer {
         // Check if the schema exists
         response = openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+NOTIFICATION_INDEX,"GET", null);
         if(response.statusCode() == 404){
-            String requestData = "{\"title\":\"notification\",\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"},\"receiver\":{\"type\":\"string\"}},\"required\":[\"name\",\"content\",\"receiver\"]}";
+            String requestData = "{\"title\":\"notification\",\"description\":\"Alert messages\",\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"},\"receiver\":{\"type\":\"string\"},\"sendDays\":{\"type\":\"array\",\"items\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":31},\"description\":\"List of days in a month to send notification (e.g., [2, 7, 9])\"}},\"required\":[\"name\",\"content\",\"receiver\",\"sendDays\"]}";
             response=openSearchClient.sendRequest(SCHEMA_UPDATE_ENDPOINT+NOTIFICATION_INDEX, "POST", requestData);
             if (response.statusCode() == 201) {
                 logger.info("✅ Notification Schema created successfully.");
@@ -118,10 +118,10 @@ public class Initializer {
         }
     }
 
-    private void notificationPermissionInitialize() throws IOException,InterruptedException{
+    private void notificationPermissionInitialize() throws IOException,InterruptedException {
         String endpoint = "/settings/_doc/notification";
-        response = openSearchClient.sendRequest(endpoint,"GET", null);
-        if(response.statusCode() == 404){
+        response = openSearchClient.sendRequest(endpoint, "GET", null);
+        if (response.statusCode() == 404) {
             response = service.createDefaultSettingForSchema(NOTIFICATION_INDEX);
             if (response.statusCode() == 201) {
                 logger.info("✅ notification settings index created successfully.");

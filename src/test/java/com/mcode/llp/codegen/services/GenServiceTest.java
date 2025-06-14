@@ -137,7 +137,7 @@ class GenServiceTest {
         when(openSearchClient.sendRequest(anyString(), eq("GET"), isNull())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(responseJson.toString());
 
-        ResponseEntity<Object> response = genService.getAllData("u", "p", "entity");
+        ResponseEntity<Object> response = genService.getAllData("u", "p", "entity",0,10);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 

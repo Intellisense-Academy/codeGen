@@ -1,7 +1,6 @@
 package com.mcode.llp.codegen.models;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Login {
-    private String email;
-    private String password;
+public class TenantRequest {
+    String tenantName;
+    String email;
 }
