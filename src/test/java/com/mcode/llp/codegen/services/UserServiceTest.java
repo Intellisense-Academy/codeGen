@@ -1,6 +1,7 @@
 package com.mcode.llp.codegen.services;
 
 import com.mcode.llp.codegen.databases.OpenSearchClient;
+import com.mcode.llp.codegen.notification.WhatAppNotification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +28,9 @@ class UserServiceTest {
     private HttpResponse<String> httpResponse;
 
     @Mock
+    private WhatAppNotification notification;
+
+    @Mock
     private HttpResponse<String> httpResponse1;
 
     @InjectMocks
@@ -34,7 +38,7 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(openSearchClient);
+        userService = new UserService(openSearchClient,notification);
     }
 
     @Test

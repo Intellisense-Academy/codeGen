@@ -7,9 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mcode.llp.codegen.convertors.QueryGenerator;
 import com.mcode.llp.codegen.databases.OpenSearchClient;
-import com.mcode.llp.codegen.models.AggregationSpec;
-import com.mcode.llp.codegen.models.SearchQuery;
-import com.mcode.llp.codegen.models.SearchRequestPayload;
+import com.mcode.llp.codegen.models.*;
 import com.mcode.llp.codegen.notification.WhatAppNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +36,7 @@ public class OpenSearchService {
 
     public List<Map<String, String>> sendNotification(SearchRequestPayload payload, String tenantId, String name) throws InterruptedException, IOException {
         JsonNode requiredDatas = executeSearch(payload, tenantId);
-        String endpoint = "/notification/_search?q=name:" + name;
+        String endpoint = "/notification/_search?q=description:" + name;
         response = openSearchClient.sendRequest(endpoint, "GET", null);
 
         List<Map<String, String>> results = new ArrayList<>();
@@ -54,7 +52,7 @@ public class OpenSearchService {
             if (requiredDatas.isArray()) {
                 for (JsonNode contributor : requiredDatas) {
                     String contributorName = contributor.path("name").asText();
-                    String phoneNumber = contributor.path("phno").asText();
+                    String phoneNumber = contributor.path("phNo").asText();
                     String contributorTenant = contributor.path("tenant").asText();
 
                     String personalizedMessage = templateContent
@@ -65,7 +63,7 @@ public class OpenSearchService {
 
                     Map<String, String> result = new HashMap<>();
                     result.put("name", contributorName);
-                    result.put("phno", phoneNumber);
+                    result.put("phNo", phoneNumber);
                     result.put("status", isSent ? "Message sent successfully" : "Failed to send message");
 
                     results.add(result);
@@ -137,6 +135,59 @@ public class OpenSearchService {
         return searchOpenSearch(payload.getMainQuery().getIndexName(), mainQuery.toString(), fieldsToReturn,payload.getAggregations());
     }
 
+    public JsonNode paidAndUnpaid(String tenantId, String startDate, String endDate) throws JsonProcessingException {
+        SearchQuery mainQuery = new SearchQuery();
+        mainQuery.setIndexName("contributor");
+        mainQuery.setFieldsToReturn(List.of("*"));
+        mainQuery.setConditionGroups(List.of(new ConditionGroup("and", List.of())));
+
+        SearchQuery relatedQuery = new SearchQuery();
+        relatedQuery.setIndexName("transaction");
+        relatedQuery.setFieldsToReturn(List.of("contributorId"));
+
+        ConditionGroup relatedConditionGroup = new ConditionGroup("and", List.of(
+                new Condition("paymentDate", "gte", startDate),
+                new Condition("paymentDate", "lt", endDate)
+        ));
+        relatedQuery.setConditionGroups(List.of(relatedConditionGroup));
+
+        AggregationSpec aggregation = new AggregationSpec();
+        aggregation.setName("total_amount");
+        aggregation.setType("sum");
+        aggregation.setField("amount");
+
+        SearchRequestPayload payload = new SearchRequestPayload();
+        payload.setMainQuery(mainQuery);
+        payload.setConnectedKey("id");
+        payload.setRelatedQuery(relatedQuery);
+        payload.setAggregations(List.of(aggregation));
+
+        // UNPAID
+        payload.setRelation("not in");
+        JsonNode unpaidResult = executeSearch(payload, tenantId);
+
+        // PAID
+        payload.setRelation("in");
+        JsonNode paidResult = executeSearch(payload, tenantId);
+
+        // Combine both
+        ObjectNode finalResult = mapper.createObjectNode();
+        ObjectNode data = mapper.createObjectNode();
+
+        data.putPOJO("total", new int[]{
+                paidResult.get("hits").size(),
+                unpaidResult.get("hits").size()
+        });
+        data.putPOJO("amount", new int[]{
+                paidResult.get("aggregations").get("total_amount").asInt(),
+                unpaidResult.get("aggregations").get("total_amount").asInt()
+        });
+
+        finalResult.set("data", data);
+        return finalResult;
+    }
+
+
     private void addAggregationsIfPresent(ObjectNode mainQuery, List<AggregationSpec> aggregations) {
         if (aggregations != null && !aggregations.isEmpty()) {
             ObjectNode aggsNode = mapper.createObjectNode();
@@ -155,7 +206,7 @@ public class OpenSearchService {
 
     private JsonNode searchOpenSearch(String indexName, String queryJson, List<String> fieldsToReturn, List<AggregationSpec> aggregations) {
         try {
-            String endPoint = "/" + indexName + "/_search";
+            String endPoint = "/" + indexName + "/_search?size=5000";
             response = openSearchClient.sendRequest(endPoint, "POST", queryJson);
 
             JsonNode responseBody = mapper.readTree(response.body());

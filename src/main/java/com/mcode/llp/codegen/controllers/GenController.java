@@ -31,9 +31,9 @@ public class GenController {
 
         try{
             String[] credentials = userService.extractCredentials(authHeader);
-            String username = credentials[0];
+            String email = credentials[0];
             String password = credentials[1];
-            return genService.insertData(username,password,entityName,requestBody);
+            return genService.insertData(email,password,entityName,requestBody);
         }catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         } catch (IOException | InterruptedException e) {
@@ -48,9 +48,9 @@ public class GenController {
         if (genService.indexExists(entityName)) {
                 try {
                     String[] credentials = userService.extractCredentials(authHeader);
-                    String username = credentials[0];
+                    String email = credentials[0];
                     String password = credentials[1];
-                    return genService.deleteData(username,password,entityName,id);
+                    return genService.deleteData(email,password,entityName,id);
                 } catch (IOException | InterruptedException e) {
                     logger.error(ACTION2, e.getMessage());
                     Thread.currentThread().interrupt();
@@ -66,9 +66,9 @@ public class GenController {
         if(genService.indexExists(entityName)){
             try {
                 String[] credentials = userService.extractCredentials(authHeader);
-                String username = credentials[0];
+                String email = credentials[0];
                 String password = credentials[1];
-                ResponseEntity<Object> responses = genService.getSingleData(username,password,entityName,id);
+                ResponseEntity<Object> responses = genService.getSingleData(email,password,entityName,id);
                 if(responses == null){
                     return ResponseEntity.notFound().build();
                 }
@@ -84,13 +84,20 @@ public class GenController {
     }
 
     @GetMapping("/{entityName}")
-    public ResponseEntity<Object> viewAllData(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,@PathVariable("entityName") String entityName) {
+    public ResponseEntity<Object> viewAllData(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
+            @PathVariable("entityName") String entityName,
+            @RequestParam(name = "from", defaultValue = "0") int from,
+            @RequestParam(name = "size", defaultValue = "10") int size) {
+
         if (genService.indexExists(entityName)) {
             try {
                 String[] credentials = userService.extractCredentials(authHeader);
-                String username = credentials[0];
+                String email = credentials[0];
                 String password = credentials[1];
-                return genService.getAllData(username,password,entityName);
+
+                return genService.getAllData(email, password, entityName, from, size);
+
             } catch (IOException | InterruptedException e) {
                 logger.error(ACTION2, e.getMessage());
                 Thread.currentThread().interrupt();
@@ -106,9 +113,9 @@ public class GenController {
         if (genService.indexExists(entityName)) {
             try {
                 String[] credentials = userService.extractCredentials(authHeader);
-                String username = credentials[0];
+                String email = credentials[0];
                 String password = credentials[1];
-                response = genService.updateData(username, password, entityName, id, updateData);
+                response = genService.updateData(email, password, entityName, id, updateData);
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(response.getBody());
             } catch (IOException | InterruptedException e) {
                 logger.error(ACTION2, e.getMessage());
