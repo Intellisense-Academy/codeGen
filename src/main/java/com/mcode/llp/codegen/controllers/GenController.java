@@ -29,7 +29,7 @@ public class GenController {
 
     @PostMapping("/login")
     public ResponseEntity<Object> login (@RequestBody Login login){
-        String username = login.getUsername();
+        String username = login.getEmail();
         String password = login.getPassword();
         try{
             return userService.loginUser(username,password);
