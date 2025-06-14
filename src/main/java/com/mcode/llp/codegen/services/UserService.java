@@ -117,28 +117,16 @@ public class UserService {
         try {
             JsonNode userData = getUserByemail(email);
 
-            // Parse JSON response
-            JsonNode jsonNode = objectMapper.readTree(response.body());
-
-            // Extract hits array
-            JsonNode hits = jsonNode.path("hits").path("hits");
-            if (hits.isEmpty()) {
+            if (userData == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of(MESSAGE, "No user found"));
-            }
-
-            // Extract user details
-            JsonNode userData = hits.get(0).path("_source");
-            if (userData.isMissingNode()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of(MESSAGE, "User data not found"));
             }
 
             // Get user details
             String storedemail = userData.path(EMAIL).asText();
             String storedPassword = userData.path("password").asText();
             String storedRole = userData.path("role").asText();
-            String storedTenet = userData.path("tenant").asText();
+            String storedTenet = userData.path(TENENT).asText();
 
             // Validate email and password
             if (!storedemail.equals(email) || !storedPassword.equals(password)) {
@@ -148,7 +136,7 @@ public class UserService {
 
             boolean responseData = isAuthorizedUser(entityName,storedRole,operation);
             if(responseData){
-                return ResponseEntity.ok(Map.of("tenant", storedTenet));
+                return ResponseEntity.ok(Map.of(TENENT, storedTenet));
             }else{
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of(MESSAGE, "Your are not permitted to access"));
