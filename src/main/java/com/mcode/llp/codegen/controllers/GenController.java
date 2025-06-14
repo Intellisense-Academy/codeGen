@@ -1,4 +1,5 @@
 package com.mcode.llp.codegen.controllers;
+import com.mcode.llp.codegen.models.Login;
 import com.mcode.llp.codegen.services.GenService;
 import com.mcode.llp.codegen.services.UserService;
 import org.slf4j.Logger;
@@ -24,6 +25,18 @@ public class GenController {
     public GenController(GenService genService,UserService userService) {
         this.genService=genService;
         this.userService = userService;
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<Object> login (@RequestBody Login login){
+        String username = login.getUsername();
+        String password = login.getPassword();
+        try{
+            return userService.loginUser(username,password);
+        }catch (IOException | InterruptedException e){
+            Thread.currentThread().interrupt();
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
     }
 
     @PostMapping("/{entityName}")

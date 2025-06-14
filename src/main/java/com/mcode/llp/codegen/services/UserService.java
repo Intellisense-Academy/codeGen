@@ -21,6 +21,8 @@ public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private static final String ERROR = "An error {}";
     private static final String MESSAGE = "message";
+    private static final String USERNAME = "username";
+    private static final String TENENT = "tenant";
     private final OpenSearchClient client;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -52,37 +54,73 @@ public class UserService {
         }
     }
 
+    private JsonNode getUserByUsername(String username) throws IOException, InterruptedException {
+        String endpoint = "/users/_search?q=username:" + username;
+        response = client.sendRequest(endpoint, "GET", null);
+        JsonNode jsonNode = objectMapper.readTree(response.body());
+        JsonNode hits = jsonNode.path("hits").path("hits");
+        return hits.isEmpty() ? null : hits.get(0).path("_source");
+    }
+
+    public ResponseEntity<Object> loginUser(String username, String password) throws IOException, InterruptedException {
+        if (username.isEmpty() || password.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(MESSAGE, "Username and password must be provided."));
+        }
+
+        try {
+            JsonNode userData = getUserByUsername(username);
+
+            if (userData == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of(MESSAGE, "No user found"));
+            }
+
+
+            String storedUsername = userData.path(USERNAME).asText();
+            String storedPassword = userData.path("password").asText();
+
+            if (!storedUsername.equals(username) || !storedPassword.equals(password)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(MESSAGE, "Invalid Username or Password."));
+            }
+
+            String role = userData.path("role").asText();
+            String tenant = userData.path(TENENT).asText();
+
+            return ResponseEntity.ok(Map.of(
+                    USERNAME, storedUsername,
+                    "role", role,
+                    TENENT, tenant
+            ));
+
+        } catch (IOException | InterruptedException e) {
+            logger.error(ERROR, e.getMessage());
+            Thread.currentThread().interrupt();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(MESSAGE, "Internal server error."));
+        }
+    }
+
     public ResponseEntity<Object> isValidUser(String username, String password, String entityName, String operation) throws IOException, InterruptedException {
         if (username.isEmpty() || password.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(MESSAGE, "Authentication required. Please provide a username and password."));
         }
-        String endpoint = "/users/_search?q=username:" + username;
+
         try {
-            response = client.sendRequest(endpoint, "GET", null);
+            JsonNode userData = getUserByUsername(username);
 
-            // Parse JSON response
-            JsonNode jsonNode = objectMapper.readTree(response.body());
-
-            // Extract hits array
-            JsonNode hits = jsonNode.path("hits").path("hits");
-            if (hits.isEmpty()) {
+            if (userData == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of(MESSAGE, "No user found"));
             }
 
-            // Extract user details
-            JsonNode userData = hits.get(0).path("_source");
-            if (userData.isMissingNode()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of(MESSAGE, "User data not found"));
-            }
-
             // Get user details
-            String storedUsername = userData.path("username").asText();
+            String storedUsername = userData.path(USERNAME).asText();
             String storedPassword = userData.path("password").asText();
             String storedRole = userData.path("role").asText();
-            String storedTenet = userData.path("tenant").asText();
+            String storedTenet = userData.path(TENENT).asText();
 
             // Validate username and password
             if (!storedUsername.equals(username) || !storedPassword.equals(password)) {
@@ -92,7 +130,7 @@ public class UserService {
 
             boolean responseData = isAuthorizedUser(entityName,storedRole,operation);
             if(responseData){
-                return ResponseEntity.ok(Map.of("tenant", storedTenet));
+                return ResponseEntity.ok(Map.of(TENENT, storedTenet));
             }else{
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of(MESSAGE, "Your are not permitted to access"));
@@ -160,5 +198,4 @@ public class UserService {
 
         return false;
     }
-
 }
